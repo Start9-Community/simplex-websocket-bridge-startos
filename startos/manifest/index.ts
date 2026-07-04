@@ -19,7 +19,7 @@ export const manifest = setupManifest({
     // Bump this tag deliberately when the upstream SimpleX version changes.
     simplex: {
       source: {
-        dockerTag: 'lundog/simplex-chat:6.5.4',
+        dockerTag: 'lundog/simplex-chat:6.5.5',
       },
       arch: ['x86_64', 'aarch64'],
     },
