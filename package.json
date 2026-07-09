@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "@simplex-chat/types": "^0.7.0",
-    "@start9labs/start-sdk": "2.0.1",
+    "@start9labs/start-sdk": "2.0.3",
     "ws": "^8.18.0"
   },
   "devDependencies": {
