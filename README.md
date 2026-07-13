@@ -35,7 +35,7 @@ The bundled client is driven over its Websocket using the upstream [SimpleX bot/
 
 | Property      | Value                                                          |
 | ------------- | -------------------------------------------------------------- |
-| Image         | `lundog/simplex-chat` (built from `lundog/simplex-chat-docker`) |
+| Image         | `lundog/simplex-websocket-bridge` (built from `lundog/simplex-websocket-bridge-docker`) |
 | Architectures | x86_64, aarch64                                                |
 | Command       | Image entrypoint — supervises `simplex-chat` and `websocat`    |
 
@@ -65,6 +65,8 @@ The Websocket carries only a small inline preview for image/video messages — a
 **Why a single mount:** `simplex-chat` finishes a download with an atomic `rename(2)` from `tmp` into `inbound`. Separate bind mounts would make that rename cross filesystems and fail with `EXDEV`, stranding the payload — so on the bridge side they must be siblings within one mount. Consumers are unaffected and may mount `inbound` and `outbound` individually.
 
 **Paths:** a consumer that mounts these subpaths at the *same mountpoints* can use the paths verbatim. This is strictly required only for **outbound** — that path travels over the Websocket and is resolved inside the bridge's container, so it must be valid there. **Inbound** is looser: the Websocket API reports only a filename, which the consumer resolves against its own inbound directory, so the two sides need only share the same host directory. The neutral `/simplex` prefix (rather than `/data/...`) lets consumers mount at identical paths without colliding with their own `/data` volume.
+
+**These paths are set explicitly, not inherited.** `main.ts` passes `SIMPLEX_INBOUND_DIR=/simplex/inbound` and `SIMPLEX_TMP_DIR=/simplex/tmp` into the container. Do not drop them and fall back to the image's defaults: those defaults have moved before (through image 6.5.4 they were `/simplex`; 6.5.5 changed them to `$HOME/.simplex/{files,tmp}`, which is *outside* this mount). A bridge writing outside `/simplex` breaks this contract silently — consumers see an empty `inbound` and no error is raised anywhere.
 
 **Security:** consumers mount only the `media/*` subpaths — never the whole `main` volume or `.simplex/` itself, which hold the SimpleX profile database and keys. `inbound` is read-only so consumers can't alter received files; write access is limited to `outbound`.
 
@@ -160,7 +162,7 @@ The bundled `simplex-chat` client behaves exactly as upstream: messages and file
 
 ```yaml
 package_id: simplex-websocket-bridge
-image: lundog/simplex-chat
+image: lundog/simplex-websocket-bridge
 architectures: [x86_64, aarch64]
 volumes:
   main: /data

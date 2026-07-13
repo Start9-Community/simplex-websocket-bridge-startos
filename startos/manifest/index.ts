@@ -15,11 +15,13 @@ export const manifest = setupManifest({
   volumes: ['main'],
   images: {
     // Consume the standalone container image published from
-    // github.com/lundog/simplex-chat-docker, rather than building locally.
-    // Bump this tag deliberately when the upstream SimpleX version changes.
+    // github.com/lundog/simplex-websocket-bridge-docker, rather than building
+    // locally. Bump this tag deliberately when the upstream SimpleX version
+    // changes. The `-N` suffix is the image revision (a rebuild of the same
+    // SimpleX version), which moves independently of SimpleX itself.
     simplex: {
       source: {
-        dockerTag: 'lundog/simplex-chat:6.5.5',
+        dockerTag: 'lundog/simplex-websocket-bridge:6.5.5-2',
       },
       arch: ['x86_64', 'aarch64'],
     },

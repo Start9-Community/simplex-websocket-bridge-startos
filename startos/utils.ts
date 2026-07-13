@@ -3,6 +3,19 @@ import { sdk } from './sdk'
 export const port = 5225
 
 /**
+ * The file-exchange paths the bridge reads and writes, inside the container.
+ *
+ * These MUST be passed to the container explicitly (see `main.ts`). The image
+ * derives its own defaults from `$HOME` (`/data/.simplex/files` and
+ * `/data/.simplex/tmp`), which land outside the `/simplex` mount below — so
+ * relying on those defaults puts received files somewhere no consumer can see
+ * and breaks the file exchange contract. The image used to default to
+ * `/simplex` itself, which is why this was previously left unset.
+ */
+export const inboundDir = '/simplex/inbound'
+export const tmpDir = '/simplex/tmp'
+
+/**
  * The `main` volume is mounted wholly at /data (HOME, profile database).
  *
  * The file exchange contract (see README) re-mounts

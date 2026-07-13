@@ -1,5 +1,5 @@
 import { sdk } from './sdk'
-import { port, mainMounts } from './utils'
+import { port, mainMounts, inboundDir, tmpDir } from './utils'
 import { i18n } from './i18n'
 
 export const main = sdk.setupMain(async ({ effects }) => {
@@ -18,6 +18,12 @@ export const main = sdk.setupMain(async ({ effects }) => {
         subcontainer,
         exec: {
           command: sdk.useEntrypoint(),
+          // Pin the file-exchange dirs into the /simplex mount. Without these the
+          // image falls back to $HOME/.simplex/{files,tmp}, outside that mount.
+          env: {
+            SIMPLEX_INBOUND_DIR: inboundDir,
+            SIMPLEX_TMP_DIR: tmpDir,
+          },
         },
         ready: {
           display: null, // surfaced to users (and dependents) via the 'websocket' health check below
