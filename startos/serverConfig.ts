@@ -35,13 +35,14 @@ export const SIMPLEX_SERVER_PACKAGE_ID = 'simplex'
 const SIMPLEX_INBOUND_DIR = '/data/.simplex/files'
 const SIMPLEX_TMP_DIR = '/data/.simplex/tmp'
 
-// Service-interface IDs the SimpleX Server (simplex) package exports. Each URI
-// it produces is a full relay address including the server's CA fingerprint and
+// Host + service-interface IDs the SimpleX Server (simplex) package exports.
+// SMP binds on its 'main' host, XFTP on a dedicated 'xftp' host. Each URI
+// produced is a full relay address including the server's CA fingerprint and
 // basic-auth password (username = "<fingerprint>:<password>", scheme "smp"/
 // "xftp"), which is exactly what simplex-chat's --server / --xftp-server want.
 // See Start9Labs/simplex-startos startos/interfaces.ts.
-const SMP_INTERFACE_ID = 'smp'
-const XFTP_INTERFACE_ID = 'xftp'
+const SMP_RELAY = { hostId: 'main', interfaceId: 'smp' } as const
+const XFTP_RELAY = { hostId: 'xftp', interfaceId: 'xftp' } as const
 
 /**
  * Best available full URI for one exported relay interface.
@@ -53,16 +54,26 @@ const XFTP_INTERFACE_ID = 'xftp'
  */
 async function resolveLocalRelayUri(
   effects: T.Effects,
-  interfaceId: string,
+  relay: { hostId: string; interfaceId: string },
 ): Promise<string> {
-  const iface = await sdk.serviceInterface
-    .get(effects, { packageId: SIMPLEX_SERVER_PACKAGE_ID, id: interfaceId })
+  // start-sdk 2.0 removed `sdk.serviceInterface`; an exported interface is now
+  // reached by walking its owning host's bindings. Scan the bindings for the
+  // interface id rather than pinning a port, so an upstream port change doesn't
+  // break resolution. The interface's `addressInfo` comes pre-filled, carrying
+  // the same filter/format helpers used below.
+  const host = await sdk.host
+    .get(effects, {
+      packageId: SIMPLEX_SERVER_PACKAGE_ID,
+      hostId: relay.hostId,
+    })
     .const()
 
-  const addressInfo = iface?.addressInfo
+  const addressInfo = Object.values(host?.bindings ?? {})
+    .map((binding) => binding.interfaces[relay.interfaceId])
+    .find(Boolean)?.addressInfo
   if (!addressInfo) {
     throw new Error(
-      `SimpleX Server did not expose its "${interfaceId}" address. Make sure the SimpleX Server package is installed and running.`,
+      `SimpleX Server did not expose its "${relay.interfaceId}" address. Make sure the SimpleX Server package is installed and running.`,
     )
   }
 
@@ -80,7 +91,7 @@ async function resolveLocalRelayUri(
   }
 
   throw new Error(
-    `SimpleX Server exposed its "${interfaceId}" interface but no reachable address (clearnet, Tor, or .local) was found.`,
+    `SimpleX Server exposed its "${relay.interfaceId}" interface but no reachable address (clearnet, Tor, or .local) was found.`,
   )
 }
 
@@ -115,8 +126,8 @@ export async function resolveServerUris(
 
   if (mode === 'local') {
     const [smpUri, xftpUri] = await Promise.all([
-      resolveLocalRelayUri(effects, SMP_INTERFACE_ID),
-      resolveLocalRelayUri(effects, XFTP_INTERFACE_ID),
+      resolveLocalRelayUri(effects, SMP_RELAY),
+      resolveLocalRelayUri(effects, XFTP_RELAY),
     ])
     return { smp: [smpUri], xftp: [xftpUri] }
   }

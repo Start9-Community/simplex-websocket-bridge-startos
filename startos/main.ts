@@ -18,7 +18,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
   const settings = await readClientSettings(effects)
   const env = await computeStartEnv(effects, settings)
 
-  const subcontainer = await sdk.SubContainer.of(
+  const subcontainer = sdk.SubContainer.of(
     effects,
     { imageId: 'simplex' },
     mainMounts,

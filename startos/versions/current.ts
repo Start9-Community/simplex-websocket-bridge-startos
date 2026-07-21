@@ -1,7 +1,7 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '0.3.0:0',
+  version: '0.3.0:1',
   releaseNotes: {
     en_US: [
       'Adds client configuration and SimpleX address management, bundles simplex-chat v6.5.5, and reworks the file-exchange contract.',
@@ -14,6 +14,7 @@ export const current = VersionInfo.of({
       '- "Reset Profile" is now "Reset Client", with clearer warnings about reconnecting contacts.',
       '- More reliable connections: large SimpleX events are no longer split into invalid WebSocket frames.',
       '- File exchange reworked for consumer packages: received and outgoing files via the .simplex/files and .simplex/outbound subpaths. See the README.',
+      '- Migrated the package to start-sdk 2.0 (requires StartOS 0.4.0-beta.10 or later).',
     ].join('\n'),
     es_ES: [
       'Añade la configuración del cliente y la gestión de direcciones de SimpleX, incluye simplex-chat v6.5.5 y rediseña el contrato de intercambio de archivos.',
@@ -26,6 +27,7 @@ export const current = VersionInfo.of({
       '- «Restablecer perfil» ahora es «Restablecer cliente», con advertencias más claras sobre la reconexión de contactos.',
       '- Conexiones más fiables: los eventos grandes de SimpleX ya no se dividen en tramas WebSocket no válidas.',
       '- Intercambio de archivos rediseñado para paquetes consumidores: archivos recibidos y salientes mediante las subrutas .simplex/files y .simplex/outbound. Consulte el README.',
+      '- Migra el paquete a start-sdk 2.0 (requiere StartOS 0.4.0-beta.10 o posterior).',
     ].join('\n'),
     de_DE: [
       'Fügt Client-Konfiguration und SimpleX-Adressverwaltung hinzu, enthält simplex-chat v6.5.5 und überarbeitet den Dateiaustausch-Vertrag.',
@@ -38,6 +40,7 @@ export const current = VersionInfo.of({
       '- „Profil zurücksetzen“ heißt jetzt „Client zurücksetzen“, mit klareren Hinweisen zum erneuten Verbinden von Kontakten.',
       '- Zuverlässigere Verbindungen: große SimpleX-Ereignisse werden nicht mehr in ungültige WebSocket-Frames aufgeteilt.',
       '- Dateiaustausch für konsumierende Pakete überarbeitet: empfangene und ausgehende Dateien über die Unterpfade .simplex/files und .simplex/outbound. Siehe README.',
+      '- Stellt das Paket auf start-sdk 2.0 um (erfordert StartOS 0.4.0-beta.10 oder neuer).',
     ].join('\n'),
     pl_PL: [
       'Dodaje konfigurację klienta i zarządzanie adresami SimpleX, zawiera simplex-chat v6.5.5 oraz przebudowuje kontrakt wymiany plików.',
@@ -50,6 +53,7 @@ export const current = VersionInfo.of({
       '- „Zresetuj profil” to teraz „Zresetuj klienta”, z jaśniejszymi ostrzeżeniami o ponownym łączeniu kontaktów.',
       '- Bardziej niezawodne połączenia: duże zdarzenia SimpleX nie są już dzielone na nieprawidłowe ramki WebSocket.',
       '- Przebudowano wymianę plików dla pakietów konsumujących: pliki odebrane i wychodzące przez podścieżki .simplex/files i .simplex/outbound. Zobacz README.',
+      '- Przenosi pakiet na start-sdk 2.0 (wymaga StartOS 0.4.0-beta.10 lub nowszego).',
     ].join('\n'),
     fr_FR: [
       "Ajoute la configuration du client et la gestion des adresses SimpleX, inclut simplex-chat v6.5.5 et repense le contrat d'échange de fichiers.",
@@ -62,6 +66,7 @@ export const current = VersionInfo.of({
       '- « Réinitialiser le profil » devient « Réinitialiser le client », avec des avertissements plus clairs sur la reconnexion des contacts.',
       '- Connexions plus fiables : les événements SimpleX volumineux ne sont plus fractionnés en trames WebSocket invalides.',
       '- Échange de fichiers repensé pour les paquets consommateurs : fichiers reçus et sortants via les sous-chemins .simplex/files et .simplex/outbound. Voir le README.',
+      '- Fait passer le paquet à start-sdk 2.0 (nécessite StartOS 0.4.0-beta.10 ou une version ultérieure).',
     ].join('\n'),
   },
   migrations: {
