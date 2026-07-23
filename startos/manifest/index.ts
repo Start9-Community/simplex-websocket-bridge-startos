@@ -23,7 +23,7 @@ export const manifest = setupManifest({
     // SimpleX version), which moves independently of SimpleX itself.
     simplex: {
       source: {
-        dockerTag: 'lundog/simplex-websocket-bridge:6.5.5-2',
+        dockerTag: 'lundog/simplex-websocket-bridge:6.5.6',
       },
       arch: ['x86_64', 'aarch64'],
     },

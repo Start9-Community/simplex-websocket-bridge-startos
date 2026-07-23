@@ -1,12 +1,12 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '0.3.0:1',
+  version: '0.3.0:2',
   releaseNotes: {
     en_US: [
-      'Adds client configuration and SimpleX address management, bundles simplex-chat v6.5.5, and reworks the file-exchange contract.',
+      'Adds client configuration and SimpleX address management, bundles simplex-chat v6.5.6, and reworks the file-exchange contract.',
       '',
-      '- Bundles simplex-chat v6.5.5 (previously v6.5.4).',
+      '- Bundles simplex-chat v6.5.6 (previously v6.5.4).',
       '- New "Configure Client" action: set the display name, full name, profile picture (from an image URL, data URL, or base64 — auto-cropped to a square and shrunk), peer type, auto-accept contact requests, business mode, welcome message, message relays, and received-file cleanup. Most changes apply live, with no restart.',
       '- Hands-off mode: choose "Managed by my application" to drive the bridge from your own software — StartOS makes no changes over the Websocket and only applies relays and file cleanup via container settings.',
       "- Message relays: use SimpleX's public servers, your own self-hosted SimpleX Server (via an optional dependency), or custom SMP/XFTP addresses — switching between them applies reliably, including back to public.",
@@ -17,9 +17,9 @@ export const current = VersionInfo.of({
       '- Migrated the package to start-sdk 2.0 (requires StartOS 0.4.0-beta.10 or later).',
     ].join('\n'),
     es_ES: [
-      'Añade la configuración del cliente y la gestión de direcciones de SimpleX, incluye simplex-chat v6.5.5 y rediseña el contrato de intercambio de archivos.',
+      'Añade la configuración del cliente y la gestión de direcciones de SimpleX, incluye simplex-chat v6.5.6 y rediseña el contrato de intercambio de archivos.',
       '',
-      '- Incluye simplex-chat v6.5.5 (antes v6.5.4).',
+      '- Incluye simplex-chat v6.5.6 (antes v6.5.4).',
       '- Nueva acción «Configurar cliente»: define el nombre visible, el nombre completo, la imagen de perfil (desde una URL de imagen, data URL o base64, recortada a un cuadrado y reducida automáticamente), el tipo de par, la aceptación automática de solicitudes de contacto, el modo empresa, el mensaje de bienvenida, los relés de mensajes y la limpieza de archivos recibidos. La mayoría de los cambios se aplican en vivo, sin reinicio.',
       '- Modo autónomo: elige «Gestionado por mi aplicación» para controlar el puente desde tu propio software: StartOS no realiza cambios a través del Websocket y solo aplica los relés y la limpieza de archivos mediante la configuración del contenedor.',
       '- Relés de mensajes: usa los servidores públicos de SimpleX, tu propio servidor SimpleX autoalojado (mediante una dependencia opcional) o direcciones SMP/XFTP personalizadas; cambiar entre ellos se aplica de forma fiable, incluido volver a los públicos.',
@@ -30,9 +30,9 @@ export const current = VersionInfo.of({
       '- Migra el paquete a start-sdk 2.0 (requiere StartOS 0.4.0-beta.10 o posterior).',
     ].join('\n'),
     de_DE: [
-      'Fügt Client-Konfiguration und SimpleX-Adressverwaltung hinzu, enthält simplex-chat v6.5.5 und überarbeitet den Dateiaustausch-Vertrag.',
+      'Fügt Client-Konfiguration und SimpleX-Adressverwaltung hinzu, enthält simplex-chat v6.5.6 und überarbeitet den Dateiaustausch-Vertrag.',
       '',
-      '- Enthält simplex-chat v6.5.5 (zuvor v6.5.4).',
+      '- Enthält simplex-chat v6.5.6 (zuvor v6.5.4).',
       '- Neue Aktion „Client konfigurieren“: Anzeigename, vollständiger Name, Profilbild (aus Bild-URL, Data-URL oder base64 — automatisch quadratisch zugeschnitten und verkleinert), Peer-Typ, automatisches Annehmen von Kontaktanfragen, Geschäftsmodus, Willkommensnachricht, Nachrichten-Relays und Bereinigung empfangener Dateien festlegen. Die meisten Änderungen werden ohne Neustart angewendet.',
       '- Hands-off-Modus: Wähle „Von meiner Anwendung verwaltet“, um die Brücke aus deiner eigenen Software zu steuern — StartOS nimmt keine Änderungen über das Websocket vor und wendet nur Relays und Dateibereinigung über die Container-Einstellungen an.',
       '- Nachrichten-Relays: nutze die öffentlichen SimpleX-Server, deinen eigenen selbst gehosteten SimpleX-Server (über eine optionale Abhängigkeit) oder eigene SMP/XFTP-Adressen; der Wechsel dazwischen wird zuverlässig angewendet, auch zurück zu den öffentlichen.',
@@ -43,9 +43,9 @@ export const current = VersionInfo.of({
       '- Stellt das Paket auf start-sdk 2.0 um (erfordert StartOS 0.4.0-beta.10 oder neuer).',
     ].join('\n'),
     pl_PL: [
-      'Dodaje konfigurację klienta i zarządzanie adresami SimpleX, zawiera simplex-chat v6.5.5 oraz przebudowuje kontrakt wymiany plików.',
+      'Dodaje konfigurację klienta i zarządzanie adresami SimpleX, zawiera simplex-chat v6.5.6 oraz przebudowuje kontrakt wymiany plików.',
       '',
-      '- Zawiera simplex-chat v6.5.5 (poprzednio v6.5.4).',
+      '- Zawiera simplex-chat v6.5.6 (poprzednio v6.5.4).',
       '- Nowa akcja „Konfiguruj klienta”: ustaw nazwę wyświetlaną, imię i nazwisko, obraz profilu (z adresu URL obrazu, data URL lub base64 — automatycznie przycięty do kwadratu i pomniejszony), typ węzła, automatyczne akceptowanie próśb o kontakt, tryb biznesowy, wiadomość powitalną, przekaźniki wiadomości i czyszczenie odebranych plików. Większość zmian jest stosowana na żywo, bez ponownego uruchamiania.',
       '- Tryb hands-off: wybierz „Zarządzane przez moją aplikację”, aby sterować mostem z własnego oprogramowania — StartOS nie wprowadza zmian przez Websocket i stosuje tylko przekaźniki oraz czyszczenie plików przez ustawienia kontenera.',
       '- Przekaźniki wiadomości: użyj publicznych serwerów SimpleX, własnego samodzielnie hostowanego serwera SimpleX (przez opcjonalną zależność) lub niestandardowych adresów SMP/XFTP; przełączanie między nimi jest stosowane niezawodnie, także z powrotem na publiczne.',
@@ -56,9 +56,9 @@ export const current = VersionInfo.of({
       '- Przenosi pakiet na start-sdk 2.0 (wymaga StartOS 0.4.0-beta.10 lub nowszego).',
     ].join('\n'),
     fr_FR: [
-      "Ajoute la configuration du client et la gestion des adresses SimpleX, inclut simplex-chat v6.5.5 et repense le contrat d'échange de fichiers.",
+      "Ajoute la configuration du client et la gestion des adresses SimpleX, inclut simplex-chat v6.5.6 et repense le contrat d'échange de fichiers.",
       '',
-      '- Inclut simplex-chat v6.5.5 (auparavant v6.5.4).',
+      '- Inclut simplex-chat v6.5.6 (auparavant v6.5.4).',
       "- Nouvelle action « Configurer le client » : définit le nom affiché, le nom complet, l'image de profil (depuis une URL d'image, une data URL ou base64 — recadrée en carré et réduite automatiquement), le type de pair, l'acceptation automatique des demandes de contact, le mode entreprise, le message de bienvenue, les relais de messages et le nettoyage des fichiers reçus. La plupart des changements s'appliquent en direct, sans redémarrage.",
       "- Mode autonome : choisissez « Géré par mon application » pour piloter le pont depuis votre propre logiciel — StartOS n'apporte aucune modification via le Websocket et applique uniquement les relais et le nettoyage des fichiers via les paramètres du conteneur.",
       "- Relais de messages : utilisez les serveurs publics de SimpleX, votre propre serveur SimpleX auto-hébergé (via une dépendance optionnelle) ou des adresses SMP/XFTP personnalisées ; le basculement entre eux s'applique de façon fiable, y compris le retour aux serveurs publics.",
