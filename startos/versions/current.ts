@@ -1,7 +1,7 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '0.3.0:3',
+  version: '0.3.0:4',
   releaseNotes: {
     en_US: [
       'Adds client configuration and SimpleX address management, bundles simplex-chat v6.5.6, and reworks the file-exchange contract.',
