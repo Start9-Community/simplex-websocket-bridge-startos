@@ -1,7 +1,7 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '0.3.0:4',
+  version: '0.3.0:5',
   releaseNotes: {
     en_US: [
       'Adds client configuration and SimpleX address management, bundles simplex-chat v6.5.6, and reworks the file-exchange contract.',
@@ -14,6 +14,7 @@ export const current = VersionInfo.of({
       '- "Reset Profile" is now "Reset Client", with clearer warnings about reconnecting contacts.',
       '- More reliable connections: large SimpleX events are no longer split into invalid WebSocket frames.',
       '- File exchange reworked for consumer packages: received and outgoing files via the .simplex/files and .simplex/outbound subpaths. See the README.',
+      '- Fixed: consumer packages that do not run as root — such as OpenClaw — could not write to the outbound directory, so sending a file failed. The directory is now writable by them.',
       '- Migrated the package to start-sdk 2.0 (requires StartOS 0.4.0-beta.10 or later).',
     ].join('\n'),
     es_ES: [
@@ -27,6 +28,7 @@ export const current = VersionInfo.of({
       '- «Restablecer perfil» ahora es «Restablecer cliente», con advertencias más claras sobre la reconexión de contactos.',
       '- Conexiones más fiables: los eventos grandes de SimpleX ya no se dividen en tramas WebSocket no válidas.',
       '- Intercambio de archivos rediseñado para paquetes consumidores: archivos recibidos y salientes mediante las subrutas .simplex/files y .simplex/outbound. Consulte el README.',
+      '- Corregido: los paquetes consumidores que no se ejecutan como root —como OpenClaw— no podían escribir en el directorio de salida, por lo que el envío de archivos fallaba. Ahora pueden escribir en él.',
       '- Migra el paquete a start-sdk 2.0 (requiere StartOS 0.4.0-beta.10 o posterior).',
     ].join('\n'),
     de_DE: [
@@ -40,6 +42,7 @@ export const current = VersionInfo.of({
       '- „Profil zurücksetzen“ heißt jetzt „Client zurücksetzen“, mit klareren Hinweisen zum erneuten Verbinden von Kontakten.',
       '- Zuverlässigere Verbindungen: große SimpleX-Ereignisse werden nicht mehr in ungültige WebSocket-Frames aufgeteilt.',
       '- Dateiaustausch für konsumierende Pakete überarbeitet: empfangene und ausgehende Dateien über die Unterpfade .simplex/files und .simplex/outbound. Siehe README.',
+      '- Behoben: Konsumierende Pakete, die nicht als root laufen – etwa OpenClaw –, konnten nicht in das Ausgangsverzeichnis schreiben, sodass das Senden von Dateien fehlschlug. Sie können nun darin schreiben.',
       '- Stellt das Paket auf start-sdk 2.0 um (erfordert StartOS 0.4.0-beta.10 oder neuer).',
     ].join('\n'),
     pl_PL: [
@@ -53,6 +56,7 @@ export const current = VersionInfo.of({
       '- „Zresetuj profil” to teraz „Zresetuj klienta”, z jaśniejszymi ostrzeżeniami o ponownym łączeniu kontaktów.',
       '- Bardziej niezawodne połączenia: duże zdarzenia SimpleX nie są już dzielone na nieprawidłowe ramki WebSocket.',
       '- Przebudowano wymianę plików dla pakietów konsumujących: pliki odebrane i wychodzące przez podścieżki .simplex/files i .simplex/outbound. Zobacz README.',
+      '- Naprawiono: pakiety konsumujące, które nie działają jako root — takie jak OpenClaw — nie mogły zapisywać w katalogu wychodzącym, więc wysyłanie plików nie działało. Teraz mogą w nim zapisywać.',
       '- Przenosi pakiet na start-sdk 2.0 (wymaga StartOS 0.4.0-beta.10 lub nowszego).',
     ].join('\n'),
     fr_FR: [
@@ -66,6 +70,7 @@ export const current = VersionInfo.of({
       '- « Réinitialiser le profil » devient « Réinitialiser le client », avec des avertissements plus clairs sur la reconnexion des contacts.',
       '- Connexions plus fiables : les événements SimpleX volumineux ne sont plus fractionnés en trames WebSocket invalides.',
       '- Échange de fichiers repensé pour les paquets consommateurs : fichiers reçus et sortants via les sous-chemins .simplex/files et .simplex/outbound. Voir le README.',
+      "- Corrigé : les paquets consommateurs qui ne s'exécutent pas en tant que root — comme OpenClaw — ne pouvaient pas écrire dans le répertoire sortant, ce qui faisait échouer l'envoi de fichiers. Ils peuvent désormais y écrire.",
       '- Fait passer le paquet à start-sdk 2.0 (nécessite StartOS 0.4.0-beta.10 ou une version ultérieure).',
     ].join('\n'),
   },

@@ -1,5 +1,6 @@
+import { chmod, mkdir } from 'node:fs/promises'
 import { sdk } from './sdk'
-import { port, mainMounts } from './utils'
+import { OUTBOUND_MODE, port, mainMounts } from './utils'
 import { i18n } from './i18n'
 import { readClientSettings } from './fileModels/clientSettings.json'
 import { computeStartEnv } from './serverConfig'
@@ -8,6 +9,18 @@ import { waitForBotReady } from './bot-client'
 
 export const main = sdk.setupMain(async ({ effects }) => {
   console.info(i18n('Starting SimpleX Websocket Bridge!'))
+
+  // Make the outbound dir writable by consumer packages. This container runs as
+  // root, but a consumer writes staged files as its own uid — the openclaw
+  // package runs OpenClaw as `node` (uid 1000) — so a root-owned outbound dir
+  // makes every send fail with EACCES. The bridge can't know a consumer's uid,
+  // and there may be more than one, so widen the mode instead of chowning to a
+  // guess. Sticky keeps each consumer able to remove only its own staged files.
+  // Mode-only, so it holds regardless of how uids are mapped into containers.
+  // Re-asserted on every start, so existing installs heal on upgrade.
+  const outboundDir = sdk.volumes.main.subpath('.simplex/outbound')
+  await mkdir(outboundDir, { recursive: true })
+  await chmod(outboundDir, OUTBOUND_MODE)
 
   // Compute the container's start environment from the saved client settings
   // (or code defaults on a fresh install). Seeds the profile on first start and,
