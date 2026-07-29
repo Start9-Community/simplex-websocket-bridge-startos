@@ -1,5 +1,6 @@
+import { chmod, mkdir } from 'node:fs/promises'
 import { sdk } from './sdk'
-import { port, mainMounts } from './utils'
+import { OUTBOUND_MODE, port, mainMounts } from './utils'
 import { i18n } from './i18n'
 import { readClientSettings } from './fileModels/clientSettings.json'
 import { computeStartEnv } from './serverConfig'
@@ -8,6 +9,17 @@ import { waitForBotReady } from './bot-client'
 
 export const main = sdk.setupMain(async ({ effects }) => {
   console.info(i18n('Starting SimpleX Websocket Bridge!'))
+
+  // Consumers stage outgoing files here as their own uid — see OUTBOUND_MODE.
+  // mkdir's mode is umask-masked, so pin `.simplex` explicitly and set
+  // outbound's mode with chmod.
+  await mkdir(sdk.volumes.main.subpath('.simplex'), {
+    recursive: true,
+    mode: 0o700,
+  })
+  const outboundDir = sdk.volumes.main.subpath('.simplex/outbound')
+  await mkdir(outboundDir, { recursive: true })
+  await chmod(outboundDir, OUTBOUND_MODE)
 
   // Compute the container's start environment from the saved client settings
   // (or code defaults on a fresh install). Seeds the profile on first start and,

@@ -3,6 +3,16 @@ import { sdk } from './sdk'
 export const port = 5225
 
 /**
+ * Mode for `.simplex/outbound`: world-writable plus the sticky bit (as on
+ * /tmp). Part of the file exchange contract — see `mainMounts` below and the
+ * README. A consumer stages files as its own uid, which the bridge cannot know
+ * and which more than one consumer may not share, so the dir is widened rather
+ * than chowned to a guess; sticky then limits each consumer to deleting the
+ * files it staged.
+ */
+export const OUTBOUND_MODE = 0o1777
+
+/**
  * A single mount: the `main` volume at /data (HOME). Everything SimpleX lives
  * under /data/.simplex — the profile database and `store.json`, plus the image's
  * file dirs `files` (received, `--files-folder`), `tmp` (`--temp-folder`), and
@@ -22,7 +32,8 @@ export const port = 5225
  *              the consumer stages into its own mount and rewrites the prefix to
  *              that container path (the openclaw-simplex plugin does this via
  *              connection.outboundFolder + outboundFolderOnClient), so no shared
- *              or verbatim mountpoint is required.
+ *              or verbatim mountpoint is required. Writable by any uid
+ *              (OUTBOUND_MODE above) since consumers rarely run as root.
  */
 export const mainMounts = sdk.Mounts.of().mountVolume({
   volumeId: 'main',
