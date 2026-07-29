@@ -85,17 +85,15 @@ export const apiKeys = sdk.Action.withInput(
       ),
       result: {
         type: 'group',
-        value: apiKeys.map(
-          (k): T.ActionResultMember => ({
-            type: 'single',
-            name: k.label,
-            description: null,
-            value: k.token,
-            copyable: true,
-            qr: false,
-            masked: true,
-          }),
-        ),
+        value: apiKeys.map((k): T.ActionResultMember => ({
+          type: 'single',
+          name: k.label,
+          description: null,
+          value: k.token,
+          copyable: true,
+          qr: false,
+          masked: true,
+        })),
       },
     }
   },

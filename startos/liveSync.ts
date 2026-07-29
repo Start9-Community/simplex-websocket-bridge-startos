@@ -136,8 +136,7 @@ export async function configureServers(
     // `userServers` isn't in the bots-subset ChatResponse union, so read the
     // envelope through a loose shape.
     const resp = getEnv.resp as unknown as
-      | { type?: string; userServers?: ServerGroup[] }
-      | undefined
+      { type?: string; userServers?: ServerGroup[] } | undefined
     if (resp?.type !== 'userServers' || !Array.isArray(resp.userServers)) {
       throw new Error(`Unexpected response reading servers: ${resp?.type}`)
     }
