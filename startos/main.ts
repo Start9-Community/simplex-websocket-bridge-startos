@@ -10,14 +10,13 @@ import { waitForBotReady } from './bot-client'
 export const main = sdk.setupMain(async ({ effects }) => {
   console.info(i18n('Starting SimpleX Websocket Bridge!'))
 
-  // Make the outbound dir writable by consumer packages. This container runs as
-  // root, but a consumer writes staged files as its own uid — the openclaw
-  // package runs OpenClaw as `node` (uid 1000) — so a root-owned outbound dir
-  // makes every send fail with EACCES. The bridge can't know a consumer's uid,
-  // and there may be more than one, so widen the mode instead of chowning to a
-  // guess. Sticky keeps each consumer able to remove only its own staged files.
-  // Mode-only, so it holds regardless of how uids are mapped into containers.
-  // Re-asserted on every start, so existing installs heal on upgrade.
+  // Consumers stage outgoing files here as their own uid — see OUTBOUND_MODE.
+  // mkdir's mode is umask-masked, so pin `.simplex` explicitly and set
+  // outbound's mode with chmod.
+  await mkdir(sdk.volumes.main.subpath('.simplex'), {
+    recursive: true,
+    mode: 0o700,
+  })
   const outboundDir = sdk.volumes.main.subpath('.simplex/outbound')
   await mkdir(outboundDir, { recursive: true })
   await chmod(outboundDir, OUTBOUND_MODE)

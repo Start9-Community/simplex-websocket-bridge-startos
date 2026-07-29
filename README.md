@@ -66,13 +66,17 @@ Both directions mount a subpath at whatever path the consumer likes — the brid
 
 **Outbound**: on send the consumer passes a file path that simplex-chat resolves inside _this_ container, so it must be valid here — namely `/data/.simplex/outbound/...`. The consumer stages the file into its own mount of the `.simplex/outbound` subpath, then rewrites the directory prefix to the bridge's path before sending. The openclaw-simplex plugin does this automatically via `connection.outboundFolder` (its mount) + `connection.outboundFolderOnClient` (`/data/.simplex/outbound`), so no shared or verbatim mountpoint is needed. `outbound` is not renamed across filesystems, so it needs no co-location with `tmp`.
 
-**Ownership and permissions.** This container runs as **root**, so everything it creates under `.simplex` is root-owned. A consumer, however, writes staged files as _its own_ uid — the `openclaw` package, for instance, runs OpenClaw as `node` (uid 1000). A root-owned `outbound` dir is therefore unwritable for it and every send fails with `EACCES`. Because the bridge can't know a consumer's uid (and there may be several), it creates `outbound` **world-writable with the sticky bit** (`1777`, as on `/tmp`) on every start, rather than chowning to a guess; sticky means each consumer can delete only the files it staged. Only packages that declare this dependency and mount the subpath can reach the dir at all. Consumers need no `chown` of their own, and should not assume they can perform one.
+**Ownership and permissions.** This container runs as **root**, so everything it creates under `.simplex` is root-owned. A consumer, however, writes staged files as _its own_ uid — the `openclaw` package, for instance, runs OpenClaw as `node` (uid 1000). A root-owned `outbound` dir is therefore unwritable for it and every send fails with `EACCES`. Because the bridge can't know a consumer's uid (and there may be several), it creates `outbound` **world-writable with the sticky bit** (`1777`, as on `/tmp`) rather than chowning to a guess; sticky means each consumer can delete only the files it staged. Consumers need no `chown` of their own, and should not assume they can perform one.
+
+The mode is re-asserted each time _this package_ starts, so an install predating it heals on upgrade with no migration. A consumer restart doesn't re-assert it, so an `outbound` recreated underneath a running bridge (a restore that drops it, a manual cleanup) keeps its creation mode until the bridge next starts.
+
+`.simplex` itself is created `0700`: only root, inside this container, ever traverses it. That costs consumers nothing — a dependency mount of `.simplex/files` or `.simplex/outbound` is resolved by StartOS when it sets the mount up, and the consumer then reaches it through a path in its own namespace that never crosses `.simplex`.
 
 Inbound needs no equivalent treatment: it's mounted read-only and simplex-chat writes received files world-readable, so a non-root consumer can read them under the root-owned dir.
 
 **These paths are set explicitly, not inherited.** `serverConfig.ts` (`computeStartEnv`) passes `SIMPLEX_INBOUND_DIR=/data/.simplex/files` and `SIMPLEX_TMP_DIR=/data/.simplex/tmp` into the container. Do not drop them and fall back to the image's defaults: those defaults have moved before (through image 6.5.4 they were `/simplex`; 6.5.5 changed them to `$HOME/.simplex/{files,tmp}`). A bridge writing outside `/data/.simplex` breaks this contract silently — consumers see an empty `files` dir and no error is raised anywhere.
 
-**Security:** consumers mount only the `.simplex/files` and `.simplex/outbound` subpaths — never the whole `main` volume, `.simplex/` itself, or the profile database and keys it holds. `files` is read-only so consumers can't alter received files; write access is limited to `outbound`.
+**Security:** consumers mount only the `.simplex/files` and `.simplex/outbound` subpaths — never the whole `main` volume, `.simplex/` itself, or the profile database and keys it holds. `files` is read-only so consumers can't alter received files; write access is limited to `outbound`, and only a package that declares this dependency and mounts the subpath can reach it at all. Note that `1777` is not isolation _between_ consumers: the sticky bit stops them deleting each other's staged files, not reading them or adding their own. Two consumers that need to be isolated from each other can each create and mount their own subdirectory of `outbound`.
 
 ---
 
@@ -183,7 +187,7 @@ auth: bearer token (Authorization: Bearer <token>); same-box dependents bypass v
 file_exchange:
   inbound: mount subpath .simplex/files read-only at any path; WS reports file name only
   outbound: mount subpath .simplex/outbound read-write at any path; pass the bridge path /data/.simplex/outbound/<name> (translate prefix)
-  outbound_perms: 1777 (world-writable + sticky, re-applied each start) so non-root consumers can stage files; no consumer chown needed
+  outbound_perms: 1777 (world-writable + sticky, re-asserted on bridge start) so non-root consumers can stage files; no consumer chown needed; not isolation between consumers
 health_checks:
   - websocket
 dependencies: simplex (optional; required only when relays = self-hosted)

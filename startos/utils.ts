@@ -5,10 +5,10 @@ export const port = 5225
 /**
  * Mode for `.simplex/outbound`: world-writable plus the sticky bit (as on
  * /tmp). Part of the file exchange contract — see `mainMounts` below and the
- * README. This container runs as root while consumers write as their own
- * (often non-root) uid, so the dir has to be writable by a uid the bridge
- * cannot know; sticky then limits each consumer to deleting its own files.
- * Applied in main.ts on every start.
+ * README. A consumer stages files as its own uid, which the bridge cannot know
+ * and which more than one consumer may not share, so the dir is widened rather
+ * than chowned to a guess; sticky then limits each consumer to deleting the
+ * files it staged.
  */
 export const OUTBOUND_MODE = 0o1777
 
