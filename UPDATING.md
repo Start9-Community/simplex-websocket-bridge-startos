@@ -22,12 +22,8 @@ independently:
   change in the image repo). An unsuffixed tag is revision 0.
 
 An unsuffixed tag points at the **newest** revision of that SimpleX version, so `6.5.5` and
-`6.5.5-2` are currently the same image. Pin the explicit revision so the pin can't shift underneath
-you.
-[lundog/simplex-websocket-bridge-docker](https://github.com/lundog/simplex-websocket-bridge-docker) and
-published to Docker Hub as `lundog/simplex-websocket-bridge`. "Upstream" here means the
-SimpleX Chat release that image bundles; this repo consumes the image via
-`dockerTag` and does not build it.
+`6.5.5-2` are currently the same image. Pin the explicit revision where one exists, so the pin
+can't shift underneath you; a SimpleX version that was never rebuilt has only its bare tag.
 
 ## Determining the upstream version
 
@@ -59,7 +55,8 @@ The pin lives in `startos/manifest/index.ts` at `images.simplex.source.dockerTag
    the entrypoint supervisor, and the `--files-folder` / `--temp-folder` wiring all live there, not
    in this repo.
 2. Bump `dockerTag` to `lundog/simplex-websocket-bridge:<tag>` (drop the leading `v` from the
-   SimpleX release tag; keep the explicit `-N` revision).
+   SimpleX release tag). Pin the explicit `-N` revision whenever the image publishes one; a first
+   build is revision 0 and has no suffixed form, so it can only be pinned bare.
 3. **Re-check the image's file-exchange defaults.** The bridge's inbound and temp directories come
    from `SIMPLEX_INBOUND_DIR` / `SIMPLEX_TMP_DIR`, which this package sets **explicitly** in
    `startos/serverConfig.ts` (`computeStartEnv`, to `/data/.simplex/files` and `/data/.simplex/tmp`,
@@ -76,19 +73,3 @@ The pin lives in `startos/manifest/index.ts` at `images.simplex.source.dockerTag
 4. Bump the package `version` and update `releaseNotes` in `startos/versions/current.ts`. Add a
    migration only if the new version needs one (see the
    [packaging guide on versions](https://docs.start9.com/packaging)).
-  The current pin lives in `startos/manifest/index.ts` at
-  `images.simplex.source.dockerTag` (the version after the `:` in
-  `lundog/simplex-websocket-bridge:<version>`).
-
-## Applying the bump
-
-1. In [lundog/simplex-websocket-bridge-docker](https://github.com/lundog/simplex-websocket-bridge-docker),
-   bump the pinned simplex-chat version, then build and publish a matching
-   multi-arch (amd64 + arm64) tag to `lundog/simplex-websocket-bridge`. The Dockerfile,
-   entrypoint supervisor, and the `--files-folder`/`--temp-folder` flags all
-   live there, not in this repo.
-2. Bump `dockerTag` in `startos/manifest/index.ts` to
-   `lundog/simplex-websocket-bridge:<new version>` (drop the leading `v` from the release tag).
-3. Bump the package `version` and update `releaseNotes` in
-   `startos/versions/current.ts`. Add a migration only if the new version needs
-   one (see the [packaging guide on versions](https://docs.start9.com/packaging)).
