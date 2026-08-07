@@ -75,6 +75,7 @@ interface ServerRow {
   preset?: boolean
   enabled: boolean
   deleted: boolean
+  roles?: Record<string, boolean>
 }
 interface ServerGroup {
   operator?: unknown
@@ -110,7 +111,13 @@ function applyProtocol(
       groups.push(custom)
     }
     for (const server of uris) {
-      custom[key].push({ server, preset: false, enabled: true, deleted: false })
+      custom[key].push({
+        server,
+        preset: false,
+        enabled: true,
+        deleted: false,
+        roles: {},
+      })
     }
   }
 }

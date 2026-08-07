@@ -1,84 +1,50 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '0.3.0:5',
+  version: '7.0.0:0',
   releaseNotes: {
-    en_US: [
-      'Adds client configuration and SimpleX address management, bundles simplex-chat v6.5.6, and reworks the file-exchange contract.',
-      '',
-      '- Bundles simplex-chat v6.5.6 (previously v6.5.4).',
-      '- New "Configure Client" action: set the display name, full name, profile picture (from an image URL, data URL, or base64 — auto-cropped to a square and shrunk), peer type, auto-accept contact requests, business mode, welcome message, message relays, and received-file cleanup. Most changes apply live, with no restart.',
-      '- Hands-off mode: choose "Managed by my application" to drive the bridge from your own software — StartOS makes no changes over the Websocket and only applies relays and file cleanup via container settings.',
-      "- Message relays: use SimpleX's public servers, your own self-hosted SimpleX Server (via an optional dependency), or custom SMP/XFTP addresses — switching between them applies reliably, including back to public.",
-      '- New "View Address" and "Reset Address" actions for the long-lived, reusable SimpleX address, alongside the existing one-time "Create Invitation".',
-      '- "Reset Profile" is now "Reset Client", with clearer warnings about reconnecting contacts.',
-      '- More reliable connections: large SimpleX events are no longer split into invalid WebSocket frames.',
-      '- File exchange reworked for consumer packages: received and outgoing files via the .simplex/files and .simplex/outbound subpaths. See the README.',
-      '- Fixed: consumer packages that do not run as root — such as OpenClaw — could not write to the outbound directory, so sending a file failed. The directory is now writable by them.',
-      '- Migrated the package to start-sdk 2.0 (requires StartOS 0.4.0-beta.10 or later).',
-    ].join('\n'),
-    es_ES: [
-      'Añade la configuración del cliente y la gestión de direcciones de SimpleX, incluye simplex-chat v6.5.6 y rediseña el contrato de intercambio de archivos.',
-      '',
-      '- Incluye simplex-chat v6.5.6 (antes v6.5.4).',
-      '- Nueva acción «Configurar cliente»: define el nombre visible, el nombre completo, la imagen de perfil (desde una URL de imagen, data URL o base64, recortada a un cuadrado y reducida automáticamente), el tipo de par, la aceptación automática de solicitudes de contacto, el modo empresa, el mensaje de bienvenida, los relés de mensajes y la limpieza de archivos recibidos. La mayoría de los cambios se aplican en vivo, sin reinicio.',
-      '- Modo autónomo: elige «Gestionado por mi aplicación» para controlar el puente desde tu propio software: StartOS no realiza cambios a través del Websocket y solo aplica los relés y la limpieza de archivos mediante la configuración del contenedor.',
-      '- Relés de mensajes: usa los servidores públicos de SimpleX, tu propio servidor SimpleX autoalojado (mediante una dependencia opcional) o direcciones SMP/XFTP personalizadas; cambiar entre ellos se aplica de forma fiable, incluido volver a los públicos.',
-      '- Nuevas acciones «Ver dirección» y «Restablecer dirección» para la dirección SimpleX de larga duración y reutilizable, junto a la ya existente «Crear invitación» de un solo uso.',
-      '- «Restablecer perfil» ahora es «Restablecer cliente», con advertencias más claras sobre la reconexión de contactos.',
-      '- Conexiones más fiables: los eventos grandes de SimpleX ya no se dividen en tramas WebSocket no válidas.',
-      '- Intercambio de archivos rediseñado para paquetes consumidores: archivos recibidos y salientes mediante las subrutas .simplex/files y .simplex/outbound. Consulte el README.',
-      '- Corregido: los paquetes consumidores que no se ejecutan como root —como OpenClaw— no podían escribir en el directorio de salida, por lo que el envío de archivos fallaba. Ahora pueden escribir en él.',
-      '- Migra el paquete a start-sdk 2.0 (requiere StartOS 0.4.0-beta.10 o posterior).',
-    ].join('\n'),
-    de_DE: [
-      'Fügt Client-Konfiguration und SimpleX-Adressverwaltung hinzu, enthält simplex-chat v6.5.6 und überarbeitet den Dateiaustausch-Vertrag.',
-      '',
-      '- Enthält simplex-chat v6.5.6 (zuvor v6.5.4).',
-      '- Neue Aktion „Client konfigurieren“: Anzeigename, vollständiger Name, Profilbild (aus Bild-URL, Data-URL oder base64 — automatisch quadratisch zugeschnitten und verkleinert), Peer-Typ, automatisches Annehmen von Kontaktanfragen, Geschäftsmodus, Willkommensnachricht, Nachrichten-Relays und Bereinigung empfangener Dateien festlegen. Die meisten Änderungen werden ohne Neustart angewendet.',
-      '- Hands-off-Modus: Wähle „Von meiner Anwendung verwaltet“, um die Brücke aus deiner eigenen Software zu steuern — StartOS nimmt keine Änderungen über das Websocket vor und wendet nur Relays und Dateibereinigung über die Container-Einstellungen an.',
-      '- Nachrichten-Relays: nutze die öffentlichen SimpleX-Server, deinen eigenen selbst gehosteten SimpleX-Server (über eine optionale Abhängigkeit) oder eigene SMP/XFTP-Adressen; der Wechsel dazwischen wird zuverlässig angewendet, auch zurück zu den öffentlichen.',
-      '- Neue Aktionen „Adresse anzeigen“ und „Adresse zurücksetzen“ für die langlebige, wiederverwendbare SimpleX-Adresse, neben der bestehenden einmaligen „Einladung erstellen“.',
-      '- „Profil zurücksetzen“ heißt jetzt „Client zurücksetzen“, mit klareren Hinweisen zum erneuten Verbinden von Kontakten.',
-      '- Zuverlässigere Verbindungen: große SimpleX-Ereignisse werden nicht mehr in ungültige WebSocket-Frames aufgeteilt.',
-      '- Dateiaustausch für konsumierende Pakete überarbeitet: empfangene und ausgehende Dateien über die Unterpfade .simplex/files und .simplex/outbound. Siehe README.',
-      '- Behoben: Konsumierende Pakete, die nicht als root laufen – etwa OpenClaw –, konnten nicht in das Ausgangsverzeichnis schreiben, sodass das Senden von Dateien fehlschlug. Sie können nun darin schreiben.',
-      '- Stellt das Paket auf start-sdk 2.0 um (erfordert StartOS 0.4.0-beta.10 oder neuer).',
-    ].join('\n'),
-    pl_PL: [
-      'Dodaje konfigurację klienta i zarządzanie adresami SimpleX, zawiera simplex-chat v6.5.6 oraz przebudowuje kontrakt wymiany plików.',
-      '',
-      '- Zawiera simplex-chat v6.5.6 (poprzednio v6.5.4).',
-      '- Nowa akcja „Konfiguruj klienta”: ustaw nazwę wyświetlaną, imię i nazwisko, obraz profilu (z adresu URL obrazu, data URL lub base64 — automatycznie przycięty do kwadratu i pomniejszony), typ węzła, automatyczne akceptowanie próśb o kontakt, tryb biznesowy, wiadomość powitalną, przekaźniki wiadomości i czyszczenie odebranych plików. Większość zmian jest stosowana na żywo, bez ponownego uruchamiania.',
-      '- Tryb hands-off: wybierz „Zarządzane przez moją aplikację”, aby sterować mostem z własnego oprogramowania — StartOS nie wprowadza zmian przez Websocket i stosuje tylko przekaźniki oraz czyszczenie plików przez ustawienia kontenera.',
-      '- Przekaźniki wiadomości: użyj publicznych serwerów SimpleX, własnego samodzielnie hostowanego serwera SimpleX (przez opcjonalną zależność) lub niestandardowych adresów SMP/XFTP; przełączanie między nimi jest stosowane niezawodnie, także z powrotem na publiczne.',
-      '- Nowe akcje „Pokaż adres” i „Zresetuj adres” dla długoterminowego, wielokrotnego adresu SimpleX, obok istniejącej jednorazowej „Utwórz zaproszenie”.',
-      '- „Zresetuj profil” to teraz „Zresetuj klienta”, z jaśniejszymi ostrzeżeniami o ponownym łączeniu kontaktów.',
-      '- Bardziej niezawodne połączenia: duże zdarzenia SimpleX nie są już dzielone na nieprawidłowe ramki WebSocket.',
-      '- Przebudowano wymianę plików dla pakietów konsumujących: pliki odebrane i wychodzące przez podścieżki .simplex/files i .simplex/outbound. Zobacz README.',
-      '- Naprawiono: pakiety konsumujące, które nie działają jako root — takie jak OpenClaw — nie mogły zapisywać w katalogu wychodzącym, więc wysyłanie plików nie działało. Teraz mogą w nim zapisywać.',
-      '- Przenosi pakiet na start-sdk 2.0 (wymaga StartOS 0.4.0-beta.10 lub nowszego).',
-    ].join('\n'),
-    fr_FR: [
-      "Ajoute la configuration du client et la gestion des adresses SimpleX, inclut simplex-chat v6.5.6 et repense le contrat d'échange de fichiers.",
-      '',
-      '- Inclut simplex-chat v6.5.6 (auparavant v6.5.4).',
-      "- Nouvelle action « Configurer le client » : définit le nom affiché, le nom complet, l'image de profil (depuis une URL d'image, une data URL ou base64 — recadrée en carré et réduite automatiquement), le type de pair, l'acceptation automatique des demandes de contact, le mode entreprise, le message de bienvenue, les relais de messages et le nettoyage des fichiers reçus. La plupart des changements s'appliquent en direct, sans redémarrage.",
-      "- Mode autonome : choisissez « Géré par mon application » pour piloter le pont depuis votre propre logiciel — StartOS n'apporte aucune modification via le Websocket et applique uniquement les relais et le nettoyage des fichiers via les paramètres du conteneur.",
-      "- Relais de messages : utilisez les serveurs publics de SimpleX, votre propre serveur SimpleX auto-hébergé (via une dépendance optionnelle) ou des adresses SMP/XFTP personnalisées ; le basculement entre eux s'applique de façon fiable, y compris le retour aux serveurs publics.",
-      "- Nouvelles actions « Afficher l'adresse » et « Réinitialiser l'adresse » pour l'adresse SimpleX durable et réutilisable, en plus de l'action « Créer une invitation » à usage unique existante.",
-      '- « Réinitialiser le profil » devient « Réinitialiser le client », avec des avertissements plus clairs sur la reconnexion des contacts.',
-      '- Connexions plus fiables : les événements SimpleX volumineux ne sont plus fractionnés en trames WebSocket invalides.',
-      '- Échange de fichiers repensé pour les paquets consommateurs : fichiers reçus et sortants via les sous-chemins .simplex/files et .simplex/outbound. Voir le README.',
-      "- Corrigé : les paquets consommateurs qui ne s'exécutent pas en tant que root — comme OpenClaw — ne pouvaient pas écrire dans le répertoire sortant, ce qui faisait échouer l'envoi de fichiers. Ils peuvent désormais y écrire.",
-      '- Fait passer le paquet à start-sdk 2.0 (nécessite StartOS 0.4.0-beta.10 ou une version ultérieure).',
-    ].join('\n'),
+    en_US: `Updated SimpleX Chat to 7.0.0, bringing SimpleX public names, improved channels, and profile descriptions. Also fixes relay switching, which 7.0.0 broke by adding a required field to every server entry.
+
+**This package now tracks the bundled SimpleX Chat version.** The previous release was 0.3.0; nothing about the bridge is reset by the jump — it is the same package, renumbered so the version tells you which client it runs.
+
+**Back up this service before updating.** 7.0.0 upgrades the SimpleX database in place, and the previous version cannot read it. Returning to 0.3.0 means uninstalling, reinstalling the older version, and restoring that backup.
+
+[Full SimpleX Chat release notes](https://github.com/simplex-chat/simplex-chat/releases/tag/v7.0.0)`,
+    es_ES: `Actualiza SimpleX Chat a 7.0.0, con los nombres públicos de SimpleX, canales mejorados y descripciones de perfil. También corrige el cambio de relés, que la 7.0.0 rompió al añadir un campo obligatorio a cada entrada de servidor.
+
+**Este paquete ahora sigue la versión de SimpleX Chat que incluye.** La versión anterior era la 0.3.0; el salto no reinicia nada del puente: es el mismo paquete, renumerado para que la versión indique qué cliente ejecuta.
+
+**Haz una copia de seguridad de este servicio antes de actualizar.** La 7.0.0 actualiza la base de datos de SimpleX y la versión anterior no puede leerla. Volver a la 0.3.0 implica desinstalar, reinstalar la versión anterior y restaurar esa copia.
+
+[Notas completas de SimpleX Chat](https://github.com/simplex-chat/simplex-chat/releases/tag/v7.0.0)`,
+    de_DE: `Aktualisiert SimpleX Chat auf 7.0.0, mit öffentlichen SimpleX-Namen, verbesserten Kanälen und Profilbeschreibungen. Behebt außerdem den Relay-Wechsel, den 7.0.0 durch ein neues Pflichtfeld in jedem Servereintrag brach.
+
+**Dieses Paket folgt jetzt der Version des enthaltenen SimpleX Chat.** Die vorherige Veröffentlichung war 0.3.0; der Sprung setzt nichts an der Bridge zurück — es ist dasselbe Paket, neu nummeriert, damit die Version zeigt, welchen Client es ausführt.
+
+**Sichere diesen Dienst vor dem Update.** 7.0.0 aktualisiert die SimpleX-Datenbank, und die vorherige Version kann sie nicht lesen. Eine Rückkehr zu 0.3.0 bedeutet Deinstallieren, die ältere Version neu installieren und diese Sicherung wiederherstellen.
+
+[Vollständige SimpleX-Chat-Release-Notes](https://github.com/simplex-chat/simplex-chat/releases/tag/v7.0.0)`,
+    pl_PL: `Aktualizuje SimpleX Chat do 7.0.0, z publicznymi nazwami SimpleX, ulepszonymi kanałami i opisami profilu. Naprawia też przełączanie przekaźników, które 7.0.0 zepsuła, dodając wymagane pole do każdego wpisu serwera.
+
+**Ten pakiet śledzi teraz wersję dołączonego SimpleX Chat.** Poprzednim wydaniem było 0.3.0; skok niczego nie resetuje w moście — to ten sam pakiet, przenumerowany tak, aby wersja wskazywała, którego klienta uruchamia.
+
+**Wykonaj kopię zapasową tej usługi przed aktualizacją.** 7.0.0 aktualizuje bazę danych SimpleX, a poprzednia wersja nie potrafi jej odczytać. Powrót do 0.3.0 oznacza odinstalowanie, ponowną instalację starszej wersji i przywrócenie tej kopii.
+
+[Pełne informacje o wydaniu SimpleX Chat](https://github.com/simplex-chat/simplex-chat/releases/tag/v7.0.0)`,
+    fr_FR: `Met à jour SimpleX Chat vers 7.0.0, avec les noms publics SimpleX, des canaux améliorés et les descriptions de profil. Corrige également le changement de relais, que la 7.0.0 a cassé en ajoutant un champ obligatoire à chaque entrée de serveur.
+
+**Ce paquet suit désormais la version de SimpleX Chat qu'il embarque.** La version précédente était la 0.3.0 ; ce saut ne réinitialise rien du pont — c'est le même paquet, renuméroté pour que la version indique quel client il exécute.
+
+**Sauvegardez ce service avant la mise à jour.** La 7.0.0 met à niveau la base de données SimpleX et la version précédente ne peut pas la lire. Revenir à la 0.3.0 implique de désinstaller, réinstaller l'ancienne version et restaurer cette sauvegarde.
+
+[Notes de version complètes de SimpleX Chat](https://github.com/simplex-chat/simplex-chat/releases/tag/v7.0.0)`,
   },
   migrations: {
-    // No data migration: the SimpleX profile DB and API keys keep their paths
-    // under .simplex/. Received files move from .simplex/media/inbound to
-    // .simplex/files (the new image default); any files left in the old
-    // .simplex/media tree are orphaned but harmless and can be removed manually.
+    // `down` is IMPOSSIBLE because that upstream migration is one-way: 6.5.6
+    // will not start against a 7.0.0 database (verified). simplex-chat leaves
+    // simplex_v1_*.db.bak snapshots beside the live files, but restoring them
+    // discards everything since the upgrade, so it stays a documented manual
+    // recovery rather than an automated rollback. See the README.
     up: async ({ effects }) => {},
     down: IMPOSSIBLE,
   },
