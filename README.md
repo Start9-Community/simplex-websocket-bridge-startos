@@ -137,6 +137,27 @@ Client settings are saved to `client-settings.json` by the **Configure Client** 
 
 **Restore behavior:** the volume is fully restored before the service starts, bringing the bridge back with its original identity and history.
 
+### Updates are one-way when simplex-chat migrates its database
+
+simplex-chat upgrades its own database in place on first start after a bundled-version bump, and those migrations are **not reversible**: the previous simplex-chat refuses to start against a migrated database. Verified for 0.3.0 → 7.0.0 (simplex-chat v6.5.6 → v7.0.0).
+
+So **back up the service before updating**. Rolling back means uninstalling, reinstalling the older package version, and restoring that backup — a downgrade in place will not work, and `migrations.down` is `IMPOSSIBLE` rather than pretending otherwise.
+
+simplex-chat does leave pre-migration snapshots beside the live files:
+
+```
+.simplex/simplex_v1_agent.db.bak
+.simplex/simplex_v1_chat.db.bak
+```
+
+Restoring those by hand (service stopped, copy each `.bak` over its live file) is a last resort if no backup exists. It discards **everything since the upgrade** — every message, contact change, and file received — and it depends on an upstream convention this package does not control, so a StartOS backup is always the better path.
+
+### Consumers see a stale mount after a reinstall
+
+A dependency mount resolves to a directory when it is set up and keeps that reference. If this package is **uninstalled and reinstalled**, its volume directory is replaced, and a consumer that was already running keeps its mount pointed at the old, now-orphaned directory — file exchange looks silently empty even though the bridge is writing normally.
+
+**Restart the consuming service** after reinstalling the bridge; it re-establishes the mount against the current directory. A normal package *update* does not have this problem.
+
 ---
 
 ## Health Checks
