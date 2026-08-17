@@ -18,7 +18,7 @@ The tag is `<simplex-version>[-<image-revision>]`, e.g. `6.5.5-2`, and the two h
 independently:
 
 - **SimpleX version** (`6.5.5`) — the SimpleX Chat release the image bundles.
-- **Image revision** (`-2`) — a rebuild of the *same* SimpleX version (an entrypoint or packaging
+- **Image revision** (`-2`) — a rebuild of the _same_ SimpleX version (an entrypoint or packaging
   change in the image repo). An unsuffixed tag is revision 0.
 
 An unsuffixed tag points at the **newest** revision of that SimpleX version, so `6.5.5` and
@@ -70,6 +70,7 @@ The pin lives in `startos/manifest/index.ts` at `images.simplex.source.dockerTag
    So on each bump, confirm the image still honors both variables, and that inbound and temp stay
    co-located: simplex-chat completes a download with an atomic `rename(2)` from temp into inbound,
    which fails with `EXDEV` if they are separate mounts.
+
 4. Bump the package `version` and update `releaseNotes` in `startos/versions/current.ts`. Add a
    migration only if the new version needs one (see the
    [packaging guide on versions](https://docs.start9.com/packaging)).

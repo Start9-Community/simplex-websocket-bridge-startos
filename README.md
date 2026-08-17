@@ -1,16 +1,18 @@
 <p align="center">
-  <img src="icon.svg" alt="SimpleX Websocket Bridge Logo" width="21%">
+  <img src="icon.png" alt="SimpleX Websocket Bridge Logo" width="21%">
 </p>
 
 # SimpleX Websocket Bridge on StartOS
 
-> **Upstream repo:** <https://github.com/simplex-chat/simplex-chat>
+> Everything not listed in this document should behave the same as upstream
+> SimpleX Chat. If a feature, setting, or behavior is not mentioned here, the
+> upstream documentation is accurate and fully applicable — see the
+> Documentation section of `instructions.md` for links.
 
-SimpleX Websocket Bridge runs the [SimpleX Chat](https://simplex.chat) client headless and exposes the SimpleX messaging network over a token-authenticated **Websocket API**, so bots, AI agents, scripts, and other StartOS services can send and receive SimpleX messages and files programmatically.
+This package runs a [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) client as a service and puts a WebSocket in front of it, so another program can hold a SimpleX identity and send and receive messages and files on your behalf. It is infrastructure for a bot, not a chat client for a person.
 
-**It is not a human chat app.** There is no inbox to read or compose in — it is the machine-to-SimpleX on-ramp that your own software drives. For chatting by hand, use the SimpleX mobile or desktop apps. [SimpleX](https://simplex.chat) is the first messenger with no user identifiers — not even random numbers — and is fully open source, end-to-end encrypted, and metadata-resistant by design.
-
-The bundled client is driven over its Websocket using the upstream [SimpleX bot/chat protocol](https://github.com/simplex-chat/simplex-chat/blob/stable/bots/README.md). [OpenClaw](https://github.com/Start9-Community/openclaw-startos) is an example consumer, using the bridge as an AI agent's SimpleX channel.
+- **Upstream repo:** <https://github.com/simplex-chat/simplex-chat>
+- **Wrapper repo:** <https://github.com/Start9-Community/simplex-websocket-bridge-startos>
 
 ---
 
@@ -18,179 +20,197 @@ The bundled client is driven over its Websocket using the upstream [SimpleX bot/
 
 - [Image and Container Runtime](#image-and-container-runtime)
 - [Volume and Data Layout](#volume-and-data-layout)
-- [Installation and First-Run Flow](#installation-and-first-run-flow)
-- [Configuration Management](#configuration-management)
-- [Network Access and Interfaces](#network-access-and-interfaces)
-- [Actions (StartOS UI)](#actions-startos-ui)
-- [Backups and Restore](#backups-and-restore)
-- [Health Checks](#health-checks)
+- [File Models](#file-models)
 - [Dependencies](#dependencies)
+- [Network Access and Interfaces](#network-access-and-interfaces)
+- [Installation and First-Run Flow](#installation-and-first-run-flow)
+- [Actions](#actions)
+- [Tasks](#tasks)
+- [Health Checks](#health-checks)
+- [Backups and Restore](#backups-and-restore)
 - [Limitations and Differences](#limitations-and-differences)
-- [What Is Unchanged from Upstream](#what-is-unchanged-from-upstream)
 - [Quick Reference for AI Consumers](#quick-reference-for-ai-consumers)
 
 ---
 
 ## Image and Container Runtime
 
-| Property      | Value                                                                                   |
-| ------------- | --------------------------------------------------------------------------------------- |
-| Image         | `lundog/simplex-websocket-bridge` (built from `lundog/simplex-websocket-bridge-docker`) |
-| Architectures | x86_64, aarch64                                                                         |
-| Command       | Image entrypoint — supervises `simplex-chat` and `websocat`                             |
+One image, consumed as published.
 
-The image entrypoint starts `simplex-chat` in headless server/bot mode on a localhost-only control port, then runs [`websocat`](https://github.com/vi/websocat) as a bridge from a container-wide port to that control port so traffic from outside the container can reach it. The supervisor exits if either child dies, so StartOS restarts the container rather than leaving a half-running service.
+| Property      | Value                             |
+| ------------- | --------------------------------- |
+| Image         | `lundog/simplex-websocket-bridge` |
+| Architectures | x86_64, aarch64                   |
+| Command       | The image's own entrypoint        |
 
----
+| Subcontainer  | Purpose                                  |
+| ------------- | ---------------------------------------- |
+| `simplex-sub` | The only daemon — the one to `attach` to |
+
+**The image ships SimpleX Chat unmodified**, which is why the package declares two licences: the packaging is MIT, the bundled application is AGPL, and what is distributed is the aggregate.
+
+**The image tag carries two version numbers.** The leading part is the SimpleX version; the trailing revision is a rebuild of the same SimpleX version, and it moves independently. Bump it deliberately.
 
 ## Volume and Data Layout
 
-| Volume | Mount Point | Purpose                                                                        |
-| ------ | ----------- | ------------------------------------------------------------------------------ |
-| `main` | `/data`     | HOME — the `.simplex` profile database and file dirs, plus `store.json` (keys) |
+One volume, and the layout under it is a published contract.
 
-The SimpleX client's own database is the source of truth for chat state — identity/keys, contacts, and chat history. Two small JSON files at the volume root hold package-level config: `client-settings.json` (the client configuration StartOS applies — display name, profile, message relays, received-file retention, and whether StartOS manages the profile at all) and `store.json` (the bridge's API keys). All SimpleX file dirs live under `/data/.simplex` — `files` (received, `--files-folder`), `tmp` (`--temp-folder`), and `outbound` (consumer-written) — as siblings on one filesystem, so simplex-chat's atomic `tmp` → `files` rename can't fail with `EXDEV`. The package pins `SIMPLEX_INBOUND_DIR`/`SIMPLEX_TMP_DIR` to these paths at start (rather than relying on the image defaults), so the file-exchange contract stays stable even if the image changes `$HOME` or its own defaults.
+| Volume | Mount Point | Purpose                               |
+| ------ | ----------- | ------------------------------------- |
+| `main` | `/data`     | The SimpleX profile and file exchange |
 
-### File exchange contract (for consumer packages)
+| Path                | Written by         | Holds                               |
+| ------------------- | ------------------ | ----------------------------------- |
+| `.simplex/`         | SimpleX            | The profile database — the identity |
+| `.simplex/files`    | SimpleX            | Files received from contacts        |
+| `.simplex/tmp`      | SimpleX            | In-flight downloads                 |
+| `.simplex/outbound` | Other packages     | Files staged to be sent             |
+| `store.json`        | Init and an action | The API keys                        |
 
-The Websocket carries only a small inline preview for image/video messages — actual file bytes (documents, voice, full-resolution media) live on disk. So other StartOS packages exchange files with the bridge by mounting subpaths of this package's `main` volume via dependency mounts (`mountDependency`), declared as an **optional** dependency so it stays opt-in. The two directions are handled differently:
+**All four directories are siblings on one filesystem on purpose.** SimpleX completes a download by renaming out of its temp directory into its files directory, and a rename across filesystems fails — so splitting them across mounts would break receiving files rather than merely rearranging them. Their paths are pinned by environment rather than left to the image's defaults, so the layout is a contract and not an accident.
 
-| Direction | Volume subpath      | Consumer mounts at          | Access     | Purpose                                         |
-| --------- | ------------------- | --------------------------- | ---------- | ----------------------------------------------- |
-| Inbound   | `.simplex/files`    | _any path_ (its own choice) | read-only  | Files received by the bridge (`--files-folder`) |
-| Outbound  | `.simplex/outbound` | _any path_ (its own choice) | read-write | Consumer-written files for the bridge to send   |
+**The outbound directory is world-writable with the sticky bit**, like `/tmp`. A consuming package stages files there as its own user, which this package cannot know in advance and which two consumers need not share — so the directory is widened rather than chowned to a guess, and the sticky bit keeps each consumer able to delete only what it staged.
 
-Both directions mount a subpath at whatever path the consumer likes — the bridge exposes no special/neutral mountpoint of its own (its files all sit under the single `/data` mount at `/data/.simplex/{files,outbound}`).
+## File Models
 
-**Inbound** is loose: the Websocket API reports a received file by _name only_, which the consumer resolves against its own view of the `files` dir — so the two sides only need to share that one host directory.
+Two models, with a clean split of ownership.
 
-**Outbound**: on send the consumer passes a file path that simplex-chat resolves inside _this_ container, so it must be valid here — namely `/data/.simplex/outbound/...`. The consumer stages the file into its own mount of the `.simplex/outbound` subpath, then rewrites the directory prefix to the bridge's path before sending. The openclaw-simplex plugin does this automatically via `connection.outboundFolder` (its mount) + `connection.outboundFolderOnClient` (`/data/.simplex/outbound`), so no shared or verbatim mountpoint is needed. `outbound` is not renamed across filesystems, so it needs no co-location with `tmp`.
+| File                  | Format | Modelled                | Written by          |
+| --------------------- | ------ | ----------------------- | ------------------- |
+| `store.json`          | JSON   | Yes — `FileHelper.json` | Init and the action |
+| `clientSettings.json` | JSON   | Yes                     | The action          |
 
-**Ownership and permissions.** This container runs as **root**, so everything it creates under `.simplex` is root-owned. A consumer, however, writes staged files as _its own_ uid — the `openclaw` package, for instance, runs OpenClaw as `node` (uid 1000). A root-owned `outbound` dir is therefore unwritable for it and every send fails with `EACCES`. Because the bridge can't know a consumer's uid (and there may be several), it creates `outbound` **world-writable with the sticky bit** (`1777`, as on `/tmp`) rather than chowning to a guess; sticky means each consumer can delete only the files it staged. Consumers need no `chown` of their own, and should not assume they can perform one.
+The store holds **the bearer tokens** that gate the WebSocket, each with a label. The settings file holds everything about the client: the display name and profile, whether contact requests are auto-accepted, business mode, a welcome message, the relay selection, and how long received files are kept.
 
-The mode is re-asserted each time _this package_ starts, so an install predating it heals on upgrade with no migration. A consumer restart doesn't re-assert it, so an `outbound` recreated underneath a running bridge (a restore that drops it, a manual cleanup) keeps its creation mode until the bridge next starts.
+Every field carries a default, so a partial or older file parses into a complete object rather than failing — and the settings file may legitimately not exist yet, since the configuration action is meant to be run **before** the first start.
 
-`.simplex` itself is created `0700`: only root, inside this container, ever traverses it. That costs consumers nothing — a dependency mount of `.simplex/files` or `.simplex/outbound` is resolved by StartOS when it sets the mount up, and the consumer then reaches it through a path in its own namespace that never crosses `.simplex`.
+**How settings are applied depends on who owns the client**, and that is the single most important thing about this package:
 
-Inbound needs no equivalent treatment: it's mounted read-only and simplex-chat writes received files world-readable, so a non-root consumer can read them under the root-owned dir.
+- **Managed** — StartOS owns the profile. Relays go in as environment at start, and the profile, address settings, auto-accept and welcome message are reconciled over the WebSocket once the socket answers.
+- **Hands-off** — your application owns the client. StartOS makes **no** WebSocket writes at all; only relays and file cleanup are applied, as environment.
 
-**These paths are set explicitly, not inherited.** `serverConfig.ts` (`computeStartEnv`) passes `SIMPLEX_INBOUND_DIR=/data/.simplex/files` and `SIMPLEX_TMP_DIR=/data/.simplex/tmp` into the container. Do not drop them and fall back to the image's defaults: those defaults have moved before (through image 6.5.4 they were `/simplex`; 6.5.5 changed them to `$HOME/.simplex/{files,tmp}`). A bridge writing outside `/data/.simplex` breaks this contract silently — consumers see an empty `files` dir and no error is raised anywhere.
-
-**Security:** consumers mount only the `.simplex/files` and `.simplex/outbound` subpaths — never the whole `main` volume, `.simplex/` itself, or the profile database and keys it holds. `files` is read-only so consumers can't alter received files; write access is limited to `outbound`, and only a package that declares this dependency and mounts the subpath can reach it at all. Note that `1777` is not isolation _between_ consumers: the sticky bit stops them deleting each other's staged files, not reading them or adding their own. Two consumers that need to be isolated from each other can each create and mount their own subdirectory of `outbound`.
-
----
-
-## Installation and First-Run Flow
-
-1. On install, the bridge seeds **one API key** so outside access is gated from first start; copy it from the **API Keys** action.
-2. On first start, the bundled client auto-creates a fresh SimpleX profile (marked as a bot by default).
-3. Copy the Websocket URL from **Interfaces → Websocket**, point a client at it with the API key as a bearer token, and drive it with the SimpleX bot/chat protocol. To hand a contact a connection link, run the **Create SimpleX Invitation** action.
-
----
-
-## Configuration Management
-
-Client settings are saved to `client-settings.json` by the **Configure Client** action and applied two ways depending on the field.
-
-- **Profile management mode** — by default StartOS manages the SimpleX profile and address (below). Setting the Configure Client "SimpleX Profile" option to _Managed by my application_ switches to a hands-off transport: StartOS makes **no** WebSocket writes, and message relays + received-file cleanup are applied via container env at start. Your own application (over the Websocket) owns the profile, address, and any runtime server changes. Useful for driving the bridge from a non-OpenClaw app that manages its own identity.
-- **Profile & address** (display name, full name, picture, peer type, auto-accept contact requests, business mode, welcome message) — in managed mode, pushed to the running client live over the Websocket, no restart. Run the action before first start to seed the identity.
-- **Message relays** (public / self-hosted SimpleX Server / custom SMP+XFTP) — in managed mode, applied live over the client's API on save, no restart. SimpleX persists the relay choice in its database and only uses the public presets when none are set, so switching back to public actively resets to the presets rather than relying on removing a flag. Relays are re-applied on every (re)start so the database stays authoritative. In hands-off mode relays are set via container env instead (set-once: `--server` persists in the DB, so reverting to public is then the app's responsibility).
-- **Received-file retention** — a container/janitor setting read at launch, so changing it saves and then restarts the service.
-- **API keys** — stored in `store.json` and managed via the **API Keys** action. Editing keys re-binds the reverse proxy's accepted-token set with no restart.
-
----
-
-## Network Access and Interfaces
-
-| Interface | Port | Protocol | Purpose                                          |
-| --------- | ---- | -------- | ------------------------------------------------ |
-| Websocket | 5225 | ws/wss   | Control API for driving SimpleX programmatically |
-
-**Access methods:**
-
-- LAN IP with unique port
-- `<hostname>.local` with unique port
-- Tor `.onion` address (opt-in — install Tor and provision an onion for the interface)
-
-**Authentication:** outside access is gated by a **bearer token** enforced at the StartOS reverse proxy — a request without a valid `Authorization: Bearer <token>` gets `401` before reaching the container. Same-box StartOS dependents (and this package's own actions) connect directly to the container's bridge IP, which does not traverse the proxy, so they need no token.
-
----
-
-## Actions (StartOS UI)
-
-| Action                        | Group       | Purpose                                                                                                                                                                                                                                                                                                                                                     |
-| ----------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Configure Client**          | General     | Set the client identity and behavior — display name, full name, picture, peer type, auto-accept contact requests, business mode, welcome message, message relays (public / self-hosted / custom), and received-file retention. Run before first start. Profile, address, and relay edits apply live; a received-file-retention change restarts the service. |
-| **Create SimpleX Invitation** | General     | Drive the running client to mint a fresh one-time SimpleX invitation link (with QR). One redemption per link.                                                                                                                                                                                                                                               |
-| **View SimpleX Address**      | General     | Show the client's long-lived, reusable SimpleX address (with QR), creating one if it doesn't exist yet. Unlike an invitation, the same address works for any number of contacts.                                                                                                                                                                            |
-| **API Keys**                  | General     | Manage the bearer tokens that gate outside access — add a labeled key per client, delete to revoke.                                                                                                                                                                                                                                                         |
-| **Reset Client**              | Danger Zone | Wipe the SimpleX identity, contacts, and chat history. Service must be stopped. API keys are preserved. Contacts must reconnect afterward; if used with OpenClaw, purge the channel's per-contact state first (SimpleX reuses low contact ids).                                                                                                             |
-| **Reset SimpleX Address**     | Danger Zone | Replace the long-lived address with a new one (runs live, no stop needed). The old address link stops working; existing contacts are unaffected.                                                                                                                                                                                                            |
-
----
-
-## Backups and Restore
-
-**Included in backup:**
-
-- `main` volume (SimpleX profile and identity, contacts, chat history, received/outbound files, and API keys)
-
-**Restore behavior:** the volume is fully restored before the service starts, bringing the bridge back with its original identity and history.
-
-### Updates are one-way when simplex-chat migrates its database
-
-simplex-chat upgrades its own database in place on first start after a bundled-version bump, and those migrations are **not reversible**: the previous simplex-chat refuses to start against a migrated database. Verified for 0.3.0 → 7.0.0 (simplex-chat v6.5.6 → v7.0.0).
-
-So **back up the service before updating**. Rolling back means uninstalling, reinstalling the older package version, and restoring that backup — a downgrade in place will not work, and `migrations.down` is `IMPOSSIBLE` rather than pretending otherwise.
-
-simplex-chat does leave pre-migration snapshots beside the live files:
-
-```
-.simplex/simplex_v1_agent.db.bak
-.simplex/simplex_v1_chat.db.bak
-```
-
-Restoring those by hand (service stopped, copy each `.bak` over its live file) is a last resort if no backup exists. It discards **everything since the upgrade** — every message, contact change, and file received — and it depends on an upstream convention this package does not control, so a StartOS backup is always the better path.
-
-### Consumers see a stale mount after a reinstall
-
-A dependency mount resolves to a directory when it is set up and keeps that reference. If this package is **uninstalled and reinstalled**, its volume directory is replaced, and a consumer that was already running keeps its mount pointed at the old, now-orphaned directory — file exchange looks silently empty even though the bridge is writing normally.
-
-**Restart the consuming service** after reinstalling the bridge; it re-establishes the mount against the current directory. A normal package *update* does not have this problem.
-
----
-
-## Health Checks
-
-| Check     | Method                | Messages                                                        |
-| --------- | --------------------- | --------------------------------------------------------------- |
-| Websocket | Port listening (5225) | Success: "Websocket is ready" / Error: "Websocket is not ready" |
-
-The standalone health check has the stable ID `websocket`, which dependent packages reference in a `kind: 'running'` dependency requirement.
-
----
+Choosing hands-off is what stops this package and your program fighting over the same profile.
 
 ## Dependencies
 
-Optional: **SimpleX Server** (`simplex`).
+One, optional, and **declared only while it is selected**.
 
-The bridge has no hard dependencies. It declares one **optional** dependency on the `simplex` package: when you choose **My self-hosted SimpleX Server** for message relays in the Configure Client action, the bridge flips `simplex` to a required running dependency and auto-pulls its SMP and XFTP addresses (full URIs, fingerprint included) from that package's service interfaces — preferring a clearnet domain, then a clearnet IP, then Tor, then `.local`. Public and Custom relays need no dependency.
+| Dependency     | Required                   | Kind      | Why                       |
+| -------------- | -------------------------- | --------- | ------------------------- |
+| SimpleX Server | No — only for local relays | `running` | Relaying your own traffic |
 
-Other packages may in turn declare an optional dependency on the bridge to consume the Websocket API and the file-exchange contract above (referencing the `websocket` health check).
+Relays can be SimpleX's public ones, your own SimpleX Server on this box, or a custom list. Only the middle option adds a dependency, and it is declared reactively — switching relay modes adds or drops it.
 
----
+**Choosing local relays without a reachable server fails the start**, deliberately, rather than silently falling back to the public presets. Being quietly moved onto someone else's relays is not an acceptable failure mode for this.
+
+## Network Access and Interfaces
+
+One interface, and it is authenticated.
+
+| Interface | Id   | Type | Port | Description                                  |
+| --------- | ---- | ---- | ---- | -------------------------------------------- |
+| Websocket | `ws` | api  | 5225 | The API for driving SimpleX programmatically |
+
+**Bearer authentication is applied at the StartOS reverse proxy**, not by the application: an outside client must send a token from the store or receive a 401 before it ever reaches the container. The token set is read reactively, so adding or revoking a key takes effect without a restart.
+
+**Same-box packages bypass that gate**, because they dial the container's bridge address directly and that path does not traverse the proxy. So a dependent service needs no token, and a token is only for something outside the server.
+
+**Anyone with a token can act as your SimpleX identity** — read messages, send messages, and send files. Treat a token as the identity itself.
+
+## Installation and First-Run Flow
+
+Install seeds **one API key**, so the gate is active from the first start and there is a working token to copy. It is seeded only at install and never re-seeded, which is what makes deleting every key a durable way to lock outside access.
+
+**The configuration action is meant to be run before the first start.** Doing so means the profile is created with the name, picture and relays you want, rather than created with defaults and then edited.
+
+The first start creates the SimpleX profile. In managed mode the package then waits for the socket to actually answer before syncing — the daemon ordering gates launch, not readiness, so syncing immediately would race the socket's bind. If that sync fails it is logged and the service keeps running, rather than the failure taking down a working bridge.
+
+## Actions
+
+Six actions, in two groups.
+
+### General
+
+#### Configure Client
+
+Everything about the client: who owns the profile, the display and full name, the profile picture, whether it presents as a bot or a person, auto-accept, business mode, the welcome message, the relay selection, and received-file retention.
+
+- **Runnable at any status**, and intended to be run before the first start.
+- **Cost:** the service restarts to apply.
+- **The ownership choice is the important field** — see [File Models](#file-models).
+
+#### API Keys
+
+Manages the bearer tokens that gate outside access.
+
+- **What it changes:** the token list, which the interface picks up reactively.
+- **Deleting every key locks out all outside access** while leaving same-box dependents working.
+
+#### Create SimpleX Invitation
+
+Produces a one-time invitation link for exactly one new contact.
+
+- **Requires the service to be running.**
+- Each run produces a fresh link; they are not interchangeable and not reusable.
+
+#### View SimpleX Address
+
+Shows the client's long-lived address, the one you can publish.
+
+- **Requires the service to be running.**
+
+### Danger Zone
+
+#### Reset SimpleX Address
+
+Replaces the long-lived address with a new one — useful after changing relays, so the address is hosted on the new servers.
+
+- **Requires the service to be running.**
+- **Existing contacts are unaffected.** Only the old link stops working, so update anywhere you published it.
+
+#### Reset Client
+
+Deletes the identity, all chats, and all contacts.
+
+- **Only when the service is stopped.** A fresh identity is created on the next start.
+- **Irreversible**, and it breaks every existing connection: anyone holding your link can no longer reach this client.
+- **It carries a consequence specific to bots, and it is not hypothetical.** SimpleX reuses low, sequential contact ids after a reset, so a brand-new contact can take a former contact's id — and a consuming application that keys state by id would treat them as the old contact, inheriting session history, pairing approval, and allow-list membership. Purge the consumer's state for this channel before letting anyone reconnect.
+
+## Tasks
+
+None. This package raises no tasks, so the service is never held on a prompt and its ordinary controls are always available.
+
+## Health Checks
+
+Two checks over the same port, and the duplication is deliberate.
+
+| Check       | Displayed as | Method                 |
+| ----------- | ------------ | ---------------------- |
+| `simplex`   | — internal   | Port 5225 is listening |
+| `websocket` | "Websocket"  | Port 5225 is listening |
+
+The daemon's own check is hidden; the standalone one is shown. **The standalone check exists because it has a stable id that dependent packages can require** in their dependency declaration — a daemon's own check is not a contract in the same way.
+
+Neither says anything about SimpleX itself. Unreachable relays, a failed message, or a contact who never connects all show a green check.
+
+## Backups and Restore
+
+The `main` volume is copied wholesale — `sdk.setupBackups(['main'])`. That is the profile database, the received files, whatever is staged in the outbound directory, and the API keys.
+
+**The backup is the identity.** Restoring it reproduces the same SimpleX client with the same contacts and the same address — which is what makes it worth having, and what makes it as sensitive as the messages themselves.
+
+**Do not run a restored copy alongside the original.** Two clients claiming one SimpleX identity is not a supported configuration.
 
 ## Limitations and Differences
 
-1. **Headless only** — there is no human-facing chat UI; the bridge is driven entirely over its Websocket API by other software.
-2. **Bearer auth suits programmatic clients** — browsers cannot set an `Authorization` header on a Websocket handshake, so the gated interface is intended for server-side clients, scripts, and same-box dependents (which bypass the gate), not in-browser Websocket use.
-3. **File bytes require the shared volume** — the Websocket carries only a small inline preview for images/video; transferring real file bytes to or from a consumer package requires the file-exchange volume contract.
-
----
-
-## What Is Unchanged from Upstream
-
-The bundled `simplex-chat` client behaves exactly as upstream: messages and files relay through SimpleX's default preset public SMP/XFTP servers, end-to-end encryption and the no-user-identifiers model are intact, and the Websocket speaks the upstream SimpleX bot/chat command protocol verbatim.
+1. **This is a bot bridge, not a chat client.** There is no interface for a human to read messages in.
+2. **A bearer token is the identity.** Anyone holding one can send and read as your client.
+3. **Same-box packages need no token**, because they bypass the proxy over the bridge.
+4. **Managed and hands-off modes are mutually exclusive**; running your own application against a managed profile means two writers.
+5. **Local relays fail the start when the server is unreachable**, rather than falling back to public ones.
+6. **Reset Client is irreversible** and can strand a consumer's contact state — see the action.
+7. **The four file directories must stay siblings** on one filesystem, or receiving files breaks.
+8. **The backup reproduces the identity**, so never restore two copies.
 
 ---
 
@@ -198,38 +218,31 @@ The bundled `simplex-chat` client behaves exactly as upstream: messages and file
 
 ```yaml
 package_id: simplex-websocket-bridge
-image: lundog/simplex-websocket-bridge
-architectures: [x86_64, aarch64]
+image: lundog/simplex-websocket-bridge # tag is <simplex-version>-<image-revision>
+architectures:
+  - x86_64
+  - aarch64
+subcontainers:
+  - simplex-sub
 volumes:
-  main: /data
-ports:
-  ws: 5225
-auth: bearer token (Authorization: Bearer <token>); same-box dependents bypass via container bridge IP
-file_exchange:
-  inbound: mount subpath .simplex/files read-only at any path; WS reports file name only
-  outbound: mount subpath .simplex/outbound read-write at any path; pass the bridge path /data/.simplex/outbound/<name> (translate prefix)
-  outbound_perms: 1777 (world-writable + sticky, re-asserted on bridge start) so non-root consumers can stage files; no consumer chown needed; not isolation between consumers
-health_checks:
-  - websocket
-dependencies: simplex (optional; required only when relays = self-hosted)
-startos_managed_env_vars: PROFILE_DISPLAY_NAME, PROFILE_PEER_TYPE, INBOUND_RETENTION_HOURS (derived from client-settings.json at start; SMP/XFTP relays are applied over the client API on start, not via env)
+  main: /data # .simplex/{,files,tmp,outbound} plus store.json — siblings on one fs
+file_models:
+  - store.json # apiKeys: [{ label, token }]
+  - clientSettings.json # profile, relays, retention, and who owns the client
+startos_managed_env_vars: [] # computed per-start from clientSettings; see serverConfig.ts
+dependencies:
+  - simplex # optional, kind: running, only while relay mode is `local`
+interfaces:
+  ws: { type: api, port: 5225 } # bearer auth at the OS proxy; bridge callers bypass it
 actions:
-  - configure-client
-  - create-invitation
-  - view-address
+  - configure-client # run before first start
   - api-keys
-  - reset-client
-  - reset-address
+  - create-invitation # only-running
+  - view-address # only-running
+  - reset-address # only-running, Danger Zone
+  - reset-client # only-stopped, Danger Zone, irreversible
+tasks: []
+health_checks:
+  - simplex # internal (display: null)
+  - websocket # displayed; stable id for dependents to require
 ```
-
----
-
-## License
-
-This package's own code is **MIT**. The bundled container image runs
-`simplex-chat`, which is **AGPL-3.0-only**, unmodified — so the distributed
-package is an aggregate: `SPDX-License-Identifier: MIT AND AGPL-3.0-only`. The
-AGPL applies to the simplex-chat component (including the network-use provision,
-AGPL §13); its corresponding source is the upstream repository
-(<https://github.com/simplex-chat/simplex-chat>) at the version pinned by the
-image. The image also bundles `websocat` (MIT).
