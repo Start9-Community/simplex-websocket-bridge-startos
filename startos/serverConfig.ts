@@ -155,14 +155,32 @@ export async function computeStartEnv(
     env.INBOUND_RETENTION_HOURS = String(settings.cleanupDays * 24)
   }
 
+  // Resolve relays on every start in BOTH modes, even though only hands-off
+  // mode uses the result here.
+  //
+  // `resolveLocalRelayUri` reads the SimpleX Server's address as a `const`, and
+  // only a read inside main's body binds it to this service. Managed mode
+  // applies relays from the `sync-settings` oneshot, which runs after main has
+  // returned — a read there doesn't bind.
+  const servers = await resolveServerUris(effects, settings).catch(
+    (err: unknown) => {
+      // Hands-off mode has no later chance to apply relays, so an unresolvable
+      // one fails the start rather than silently falling back to the presets.
+      if (!settings.manageProfile) throw err
+      // Managed mode retries in the oneshot, which reports the failure there.
+      // The `const` above is registered either way, so the service still
+      // re-runs main once the server becomes resolvable.
+      return null
+    },
+  )
+
   // Hands-off mode: StartOS makes no WebSocket writes, so relays are applied
   // via the image's env flags instead of the operator-servers API. (Managed
   // mode leaves these unset and configures relays over the WS on start —
   // env `--server` persists in the DB and can't be reset from the flag.)
-  if (!settings.manageProfile) {
-    const { smp, xftp } = await resolveServerUris(effects, settings)
-    if (smp.length) env.SMP_SERVERS = smp.join(' ')
-    if (xftp.length) env.XFTP_SERVERS = xftp.join(' ')
+  if (!settings.manageProfile && servers) {
+    if (servers.smp.length) env.SMP_SERVERS = servers.smp.join(' ')
+    if (servers.xftp.length) env.XFTP_SERVERS = servers.xftp.join(' ')
   }
 
   return env
