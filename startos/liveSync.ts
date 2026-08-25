@@ -38,12 +38,40 @@ function activeUser(env: Envelope): { userId: number; profile: SX.Profile } {
   return { userId: env.resp.user.userId, profile: env.resp.user.profile }
 }
 
+/**
+ * Host of a relay that presented a TLS identity other than the one pinned in
+ * the address it hosts, or undefined for every other failure.
+ *
+ * Reinstalling a self-hosted SimpleX Server regenerates its CA, and an address
+ * created beforehand keeps pointing at the old identity. Changing the relay
+ * selection does not re-home an address that already exists — it only decides
+ * where new queues are created — so every command touching that address fails
+ * this way until the address itself is reset.
+ */
+function staleRelayHost(err: SX.ChatError): string | undefined {
+  if (err.type !== 'errorAgent') return undefined
+  const { agentError } = err
+  if (agentError.type !== 'BROKER') return undefined
+  const { brokerErr } = agentError
+  if (brokerErr.type !== 'NETWORK') return undefined
+  if (brokerErr.networkError.type !== 'unknownCAError') return undefined
+  // Drop the pinned fingerprint; the host is the part worth reporting.
+  return agentError.brokerAddress.split('@').pop() || agentError.brokerAddress
+}
+
 function assertNotCmdError(env: Envelope, what: string): void {
-  if (env.resp?.type === 'chatCmdError') {
+  if (env.resp?.type !== 'chatCmdError') return
+
+  const host = staleRelayHost(env.resp.chatError)
+  if (host) {
     throw new Error(
-      `Bot refused ${what}: ${JSON.stringify(env.resp).slice(0, 800)}`,
+      `Bot refused ${what}: the relay at ${host} presented a different TLS identity than the one pinned in the address it hosts, which is what reinstalling a SimpleX Server does. Changing the relay selection does not move an address that already exists — run "Reset SimpleX Address" to recreate it on the current relays.`,
     )
   }
+
+  throw new Error(
+    `Bot refused ${what}: ${JSON.stringify(env.resp).slice(0, 800)}`,
+  )
 }
 
 /** Plain text of a welcome message (stored as MsgContent), or '' if none. */
