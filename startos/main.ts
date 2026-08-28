@@ -28,7 +28,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
   // SimpleX Server dependency isn't reachable — rather than silently using
   // public presets.
   const settings = await readClientSettings(effects)
-  const env = await computeStartEnv(effects, settings)
+  const { env, servers } = await computeStartEnv(effects, settings)
 
   const subcontainer = sdk.SubContainer.of(
     effects,
@@ -86,7 +86,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
           await waitForBotReady(effects)
           // Apply the selected relays first (authoritative over the DB —
           // sets custom/local, resets public), then reconcile the profile.
-          await configureServers(effects, settings)
+          if (servers) await configureServers(effects, servers)
           await syncClientSettings(effects, settings)
           console.info(i18n('SimpleX client settings synced'))
         } catch (err) {

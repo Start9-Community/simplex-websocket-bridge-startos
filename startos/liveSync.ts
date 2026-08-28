@@ -2,7 +2,7 @@ import { T } from '@start9labs/start-sdk'
 import { CC, T as SX } from '@simplex-chat/types'
 import { withBotSession, Envelope } from './bot-client'
 import { ClientSettings } from './fileModels/clientSettings.json'
-import { resolveServerUris } from './serverConfig'
+import { ResolvedServerUris } from './serverConfig'
 
 /**
  * Reconcile a running bot's live profile and address settings with the
@@ -38,12 +38,35 @@ function activeUser(env: Envelope): { userId: number; profile: SX.Profile } {
   return { userId: env.resp.user.userId, profile: env.resp.user.profile }
 }
 
+/**
+ * Host of a relay whose TLS identity no longer matches the one pinned in the
+ * address it hosts, which is what reinstalling a SimpleX Server produces.
+ * Changing the relay selection does not re-home an address that already exists.
+ */
+function staleRelayHost(err: SX.ChatError): string | undefined {
+  if (err.type !== 'errorAgent') return undefined
+  const { agentError } = err
+  if (agentError.type !== 'BROKER') return undefined
+  const { brokerErr } = agentError
+  if (brokerErr.type !== 'NETWORK') return undefined
+  if (brokerErr.networkError.type !== 'unknownCAError') return undefined
+  // Drop the pinned fingerprint; the host is the part worth reporting.
+  return agentError.brokerAddress.split('@').pop() || agentError.brokerAddress
+}
+
 function assertNotCmdError(env: Envelope, what: string): void {
-  if (env.resp?.type === 'chatCmdError') {
+  if (env.resp?.type !== 'chatCmdError') return
+
+  const host = staleRelayHost(env.resp.chatError)
+  if (host) {
     throw new Error(
-      `Bot refused ${what}: ${JSON.stringify(env.resp).slice(0, 800)}`,
+      `Bot refused ${what}: the relay at ${host} is not the one this address was created against. Reinstalling a SimpleX Server regenerates its TLS identity, and changing the relay selection does not move an existing address. Run "Reset SimpleX Address" to recreate it on the current relays.`,
     )
   }
+
+  throw new Error(
+    `Bot refused ${what}: ${JSON.stringify(env.resp).slice(0, 800)}`,
+  )
 }
 
 /** Plain text of a welcome message (stored as MsgContent), or '' if none. */
@@ -123,18 +146,21 @@ function applyProtocol(
 }
 
 /**
- * Apply the selected SMP/XFTP relays to the running client over the WS API,
+ * Apply already-resolved SMP/XFTP relays to the running client over the WS API,
  * making the chat database — not the removed `--server` env — authoritative.
  * Sets custom/local servers and resets to the public presets, per protocol.
+ *
+ * Takes the URIs rather than resolving them so the caller owns when the
+ * SimpleX Server's address is read — see computeStartEnv.
  *
  * Runs only on (re)start (the post-ready one-shot in main.ts) and on the
  * Configure action when relays change (which applies live — no restart).
  */
 export async function configureServers(
   effects: T.Effects,
-  settings: ClientSettings,
+  servers: ResolvedServerUris,
 ): Promise<void> {
-  const { smp, xftp } = await resolveServerUris(effects, settings)
+  const { smp, xftp } = servers
   await withBotSession(effects, async (send) => {
     const { userId } = activeUser(await send('/user'))
 

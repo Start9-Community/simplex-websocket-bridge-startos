@@ -44,6 +44,11 @@ const SIMPLEX_TMP_DIR = '/data/.simplex/tmp'
 const SMP_RELAY = { hostId: 'main', interfaceId: 'smp' } as const
 const XFTP_RELAY = { hostId: 'xftp', interfaceId: 'xftp' } as const
 
+// The SimpleX Server publishes its binding before its CA fingerprint exists,
+// formatting the address as `smp://undefined:null@host:5223`. Match the
+// fingerprint shape so a half-built relay reads as not-ready, not as a relay.
+const RELAY_URI = /^[a-z]+:\/\/[A-Za-z0-9_-]{40,}=[:@]/
+
 /**
  * Best available full URI for one exported relay interface.
  *
@@ -56,43 +61,46 @@ async function resolveLocalRelayUri(
   effects: T.Effects,
   relay: { hostId: string; interfaceId: string },
 ): Promise<string> {
-  // start-sdk 2.0 removed `sdk.serviceInterface`; an exported interface is now
-  // reached by walking its owning host's bindings. Scan the bindings for the
-  // interface id rather than pinning a port, so an upstream port change doesn't
-  // break resolution. The interface's `addressInfo` comes pre-filled, carrying
-  // the same filter/format helpers used below.
-  const host = await sdk.host
-    .get(effects, {
-      packageId: SIMPLEX_SERVER_PACKAGE_ID,
-      hostId: relay.hostId,
-    })
+  // Resolve inside `map`, never outside it: the default `eq` deep-compares
+  // whole host records, and a filled address's lazy `nonLocal`/`public`/
+  // `bridge` getters make that recurse until the stack overflows — which
+  // const() swallows on the first change, dropping the watch silently.
+  //
+  // Scan bindings for the interface id rather than pinning a port, so an
+  // upstream port change doesn't break resolution.
+  const uri = await sdk.host
+    .get(
+      effects,
+      { packageId: SIMPLEX_SERVER_PACKAGE_ID, hostId: relay.hostId },
+      (host) => {
+        const addressInfo = Object.values(host?.bindings ?? {})
+          .map((binding) => binding.interfaces[relay.interfaceId])
+          .find(Boolean)?.addressInfo
+        if (!addressInfo) return undefined
+
+        // Literal filters so each satisfies the .filter() generic; ordered
+        // from most to least universally reachable.
+        const tiers = [
+          addressInfo.filter({ kind: 'domain', visibility: 'public' }),
+          addressInfo.filter({ kind: 'ip', visibility: 'public' }),
+          addressInfo.filter({ kind: 'plugin' }),
+          addressInfo.filter({ kind: 'mdns' }),
+        ]
+        for (const tier of tiers) {
+          const [url] = tier.format('urlstring')
+          if (url && RELAY_URI.test(url)) return url
+        }
+        return undefined
+      },
+    )
     .const()
 
-  const addressInfo = Object.values(host?.bindings ?? {})
-    .map((binding) => binding.interfaces[relay.interfaceId])
-    .find(Boolean)?.addressInfo
-  if (!addressInfo) {
+  if (!uri) {
     throw new Error(
-      `SimpleX Server did not expose its "${relay.interfaceId}" address. Make sure the SimpleX Server package is installed and running.`,
+      `SimpleX Server did not expose a reachable "${relay.interfaceId}" address (clearnet, Tor, or .local). Make sure the SimpleX Server package is installed and running.`,
     )
   }
-
-  // Literal filters here so each satisfies the .filter() generic; ordered
-  // from most to least universally reachable.
-  const tiers = [
-    addressInfo.filter({ kind: 'domain', visibility: 'public' }),
-    addressInfo.filter({ kind: 'ip', visibility: 'public' }),
-    addressInfo.filter({ kind: 'plugin' }),
-    addressInfo.filter({ kind: 'mdns' }),
-  ]
-  for (const tier of tiers) {
-    const urls = tier.format('urlstring')
-    if (urls.length) return urls[0]
-  }
-
-  throw new Error(
-    `SimpleX Server exposed its "${relay.interfaceId}" interface but no reachable address (clearnet, Tor, or .local) was found.`,
-  )
+  return uri
 }
 
 /** Full SMP/XFTP relay URIs for the selected mode, to apply over the WS API. */
@@ -136,11 +144,18 @@ export async function resolveServerUris(
   return { smp: [], xftp: [] }
 }
 
-/** Full start environment for the simplex daemon, derived from settings. */
+/**
+ * Full start environment for the simplex daemon, plus the relays resolved on
+ * the way — managed mode applies those over the WS once the socket answers,
+ * rather than resolving the same addresses a second time.
+ */
 export async function computeStartEnv(
   effects: T.Effects,
   settings: ClientSettings,
-): Promise<Record<string, string>> {
+): Promise<{
+  env: Record<string, string>
+  servers: ResolvedServerUris | null
+}> {
   const env: Record<string, string> = {
     PROFILE_DISPLAY_NAME: settings.displayName,
     PROFILE_PEER_TYPE: settings.peerType,
@@ -155,15 +170,26 @@ export async function computeStartEnv(
     env.INBOUND_RETENTION_HOURS = String(settings.cleanupDays * 24)
   }
 
+  // Resolved in both modes, though only hands-off applies relays as env below:
+  // this read is what registers the `const` watch on the SimpleX Server's
+  // address, and it has to happen in main's body to bind to the service.
+  const servers = await resolveServerUris(effects, settings).catch(
+    (err: unknown) => {
+      // Hands-off mode has no later chance to apply relays, so an unresolvable
+      // one fails the start rather than silently falling back to the presets.
+      if (!settings.manageProfile) throw err
+      return null
+    },
+  )
+
   // Hands-off mode: StartOS makes no WebSocket writes, so relays are applied
   // via the image's env flags instead of the operator-servers API. (Managed
   // mode leaves these unset and configures relays over the WS on start —
   // env `--server` persists in the DB and can't be reset from the flag.)
-  if (!settings.manageProfile) {
-    const { smp, xftp } = await resolveServerUris(effects, settings)
-    if (smp.length) env.SMP_SERVERS = smp.join(' ')
-    if (xftp.length) env.XFTP_SERVERS = xftp.join(' ')
+  if (!settings.manageProfile && servers) {
+    if (servers.smp.length) env.SMP_SERVERS = servers.smp.join(' ')
+    if (servers.xftp.length) env.XFTP_SERVERS = servers.xftp.join(' ')
   }
 
-  return env
+  return { env, servers }
 }
