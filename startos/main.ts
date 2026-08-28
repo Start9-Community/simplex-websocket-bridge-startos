@@ -3,7 +3,7 @@ import { sdk } from './sdk'
 import { OUTBOUND_MODE, port, mainMounts } from './utils'
 import { i18n } from './i18n'
 import { readClientSettings } from './fileModels/clientSettings.json'
-import { computeStartEnv } from './serverConfig'
+import { computeStartEnv, resolveServerUris } from './serverConfig'
 import { syncClientSettings, configureServers } from './liveSync'
 import { waitForBotReady } from './bot-client'
 
@@ -28,7 +28,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
   // SimpleX Server dependency isn't reachable — rather than silently using
   // public presets.
   const settings = await readClientSettings(effects)
-  const env = await computeStartEnv(effects, settings)
+  const { env, servers } = await computeStartEnv(effects, settings)
 
   const subcontainer = sdk.SubContainer.of(
     effects,
@@ -86,7 +86,13 @@ export const main = sdk.setupMain(async ({ effects }) => {
           await waitForBotReady(effects)
           // Apply the selected relays first (authoritative over the DB —
           // sets custom/local, resets public), then reconcile the profile.
-          await configureServers(effects, settings)
+          // `servers` is null only when the start-time resolve failed; retry
+          // here so the dependency gets a second chance and the error is this
+          // attempt's, not a stale one.
+          await configureServers(
+            effects,
+            servers ?? (await resolveServerUris(effects, settings)),
+          )
           await syncClientSettings(effects, settings)
           console.info(i18n('SimpleX client settings synced'))
         } catch (err) {

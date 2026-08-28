@@ -21,11 +21,11 @@ export const current = VersionInfo.of({
   },
   migrations: {
     // `down` is IMPOSSIBLE because the migration to 7.0.0 is one-way.
-    // Downgrades to 7.x stay open, adjust if a breaking database migration occurs.
+    // 7.0.0:1 changes the wrapper only, so a fallback to 7.0.0:0 is safe.
     up: async ({ effects }) => {},
     down: IMPOSSIBLE,
     other: {
-      '>=7.0.0:0 && <8.0.0:0': { down: async ({ effects }) => {} },
+      '=7.0.0:0': { down: async ({ effects }) => {} },
     },
   },
 })

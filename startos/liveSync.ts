@@ -2,7 +2,7 @@ import { T } from '@start9labs/start-sdk'
 import { CC, T as SX } from '@simplex-chat/types'
 import { withBotSession, Envelope } from './bot-client'
 import { ClientSettings } from './fileModels/clientSettings.json'
-import { resolveServerUris } from './serverConfig'
+import { ResolvedServerUris } from './serverConfig'
 
 /**
  * Reconcile a running bot's live profile and address settings with the
@@ -39,14 +39,9 @@ function activeUser(env: Envelope): { userId: number; profile: SX.Profile } {
 }
 
 /**
- * Host of a relay that presented a TLS identity other than the one pinned in
- * the address it hosts, or undefined for every other failure.
- *
- * Reinstalling a self-hosted SimpleX Server regenerates its CA, and an address
- * created beforehand keeps pointing at the old identity. Changing the relay
- * selection does not re-home an address that already exists — it only decides
- * where new queues are created — so every command touching that address fails
- * this way until the address itself is reset.
+ * Host of a relay whose TLS identity no longer matches the one pinned in the
+ * address it hosts, which is what reinstalling a SimpleX Server produces.
+ * Changing the relay selection does not re-home an address that already exists.
  */
 function staleRelayHost(err: SX.ChatError): string | undefined {
   if (err.type !== 'errorAgent') return undefined
@@ -65,7 +60,7 @@ function assertNotCmdError(env: Envelope, what: string): void {
   const host = staleRelayHost(env.resp.chatError)
   if (host) {
     throw new Error(
-      `Bot refused ${what}: the relay at ${host} presented a different TLS identity than the one pinned in the address it hosts, which is what reinstalling a SimpleX Server does. Changing the relay selection does not move an address that already exists — run "Reset SimpleX Address" to recreate it on the current relays.`,
+      `Bot refused ${what}: the relay at ${host} is not the one this address was created against. Reinstalling a SimpleX Server regenerates its TLS identity, and changing the relay selection does not move an existing address — run "Reset SimpleX Address" to recreate it on the current relays.`,
     )
   }
 
@@ -151,18 +146,21 @@ function applyProtocol(
 }
 
 /**
- * Apply the selected SMP/XFTP relays to the running client over the WS API,
+ * Apply already-resolved SMP/XFTP relays to the running client over the WS API,
  * making the chat database — not the removed `--server` env — authoritative.
  * Sets custom/local servers and resets to the public presets, per protocol.
+ *
+ * Takes the URIs rather than resolving them so the caller owns when the
+ * SimpleX Server's address is read — see computeStartEnv.
  *
  * Runs only on (re)start (the post-ready one-shot in main.ts) and on the
  * Configure action when relays change (which applies live — no restart).
  */
 export async function configureServers(
   effects: T.Effects,
-  settings: ClientSettings,
+  servers: ResolvedServerUris,
 ): Promise<void> {
-  const { smp, xftp } = await resolveServerUris(effects, settings)
+  const { smp, xftp } = servers
   await withBotSession(effects, async (send) => {
     const { userId } = activeUser(await send('/user'))
 

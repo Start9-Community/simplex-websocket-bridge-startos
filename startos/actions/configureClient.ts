@@ -6,6 +6,7 @@ import {
   ClientSettings,
 } from '../fileModels/clientSettings.json'
 import { syncClientSettings, configureServers } from '../liveSync'
+import { resolveServerUris } from '../serverConfig'
 import { pastedImageToAvatarDataUrl } from '../avatar'
 
 const { InputSpec, Value, Variants } = sdk
@@ -348,7 +349,12 @@ export const configureClient = sdk.Action.withInput(
     // dependents. Relays via configureServers, profile/address via the sync. A
     // rejected relay config surfaces here so it's diagnosable immediately.
     try {
-      if (relaysChanged) await configureServers(effects, settings)
+      if (relaysChanged) {
+        await configureServers(
+          effects,
+          await resolveServerUris(effects, settings),
+        )
+      }
       await syncClientSettings(effects, settings)
     } catch (err) {
       return {
