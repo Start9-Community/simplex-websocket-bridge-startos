@@ -3,7 +3,7 @@ import { sdk } from './sdk'
 import { OUTBOUND_MODE, port, mainMounts } from './utils'
 import { i18n } from './i18n'
 import { readClientSettings } from './fileModels/clientSettings.json'
-import { computeStartEnv, resolveServerUris } from './serverConfig'
+import { computeStartEnv } from './serverConfig'
 import { syncClientSettings, configureServers } from './liveSync'
 import { waitForBotReady } from './bot-client'
 
@@ -86,13 +86,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
           await waitForBotReady(effects)
           // Apply the selected relays first (authoritative over the DB —
           // sets custom/local, resets public), then reconcile the profile.
-          // `servers` is null only when the start-time resolve failed; retry
-          // here so the dependency gets a second chance and the error is this
-          // attempt's, not a stale one.
-          await configureServers(
-            effects,
-            servers ?? (await resolveServerUris(effects, settings)),
-          )
+          if (servers) await configureServers(effects, servers)
           await syncClientSettings(effects, settings)
           console.info(i18n('SimpleX client settings synced'))
         } catch (err) {

@@ -44,12 +44,9 @@ const SIMPLEX_TMP_DIR = '/data/.simplex/tmp'
 const SMP_RELAY = { hostId: 'main', interfaceId: 'smp' } as const
 const XFTP_RELAY = { hostId: 'xftp', interfaceId: 'xftp' } as const
 
-// A relay URI carries the server's CA fingerprint as its userinfo, and simplex
-// -chat needs it to authenticate the relay. The SimpleX Server publishes its
-// binding before that fingerprint exists, though: mid-reinstall the address
-// formats as `smp://undefined:null@host:5223`, and passing that on would set
-// an unusable relay rather than none. Match the fingerprint shape and treat
-// anything else as not-ready-yet.
+// The SimpleX Server publishes its binding before its CA fingerprint exists,
+// formatting the address as `smp://undefined:null@host:5223`. Match the
+// fingerprint shape so a half-built relay reads as not-ready, not as a relay.
 const RELAY_URI = /^[a-z]+:\/\/[A-Za-z0-9_-]{40,}=[:@]/
 
 /**
@@ -64,12 +61,10 @@ async function resolveLocalRelayUri(
   effects: T.Effects,
   relay: { hostId: string; interfaceId: string },
 ): Promise<string> {
-  // Resolve to the URI inside `map`, never outside it. `.const()` compares each
-  // new value against the last with deepEqual, and a whole host record cannot
-  // be compared: its addresses carry lazy `nonLocal`/`public`/`bridge` getters
-  // that each return another record with the same getters, so the walk never
-  // terminates. The RangeError surfaces on the first *change*, inside const()'s
-  // rejection path, which drops the watch without restarting or logging.
+  // Resolve inside `map`, never outside it: the default `eq` deep-compares
+  // whole host records, and a filled address's lazy `nonLocal`/`public`/
+  // `bridge` getters make that recurse until the stack overflows — which
+  // const() swallows on the first change, dropping the watch silently.
   //
   // Scan bindings for the interface id rather than pinning a port, so an
   // upstream port change doesn't break resolution.
@@ -175,17 +170,14 @@ export async function computeStartEnv(
     env.INBOUND_RETENTION_HOURS = String(settings.cleanupDays * 24)
   }
 
-  // Resolve in both modes, though only hands-off applies relays as env below.
-  // This read is what registers the `const` watch on the SimpleX Server's
-  // address; managed mode's other read is behind the bot socket in the
-  // sync-settings oneshot, so a socket that never answers would leave nothing
-  // watching, and a later address change would go unnoticed.
+  // Resolved in both modes, though only hands-off applies relays as env below:
+  // this read is what registers the `const` watch on the SimpleX Server's
+  // address, and it has to happen in main's body to bind to the service.
   const servers = await resolveServerUris(effects, settings).catch(
     (err: unknown) => {
       // Hands-off mode has no later chance to apply relays, so an unresolvable
       // one fails the start rather than silently falling back to the presets.
       if (!settings.manageProfile) throw err
-      // Managed mode retries in the oneshot, which reports the failure there.
       return null
     },
   )

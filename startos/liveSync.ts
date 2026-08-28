@@ -60,7 +60,7 @@ function assertNotCmdError(env: Envelope, what: string): void {
   const host = staleRelayHost(env.resp.chatError)
   if (host) {
     throw new Error(
-      `Bot refused ${what}: the relay at ${host} is not the one this address was created against. Reinstalling a SimpleX Server regenerates its TLS identity, and changing the relay selection does not move an existing address — run "Reset SimpleX Address" to recreate it on the current relays.`,
+      `Bot refused ${what}: the relay at ${host} is not the one this address was created against. Reinstalling a SimpleX Server regenerates its TLS identity, and changing the relay selection does not move an existing address. Run "Reset SimpleX Address" to recreate it on the current relays.`,
     )
   }
 
