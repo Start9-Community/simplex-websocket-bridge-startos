@@ -20,6 +20,11 @@ import { ClientSettings } from './fileModels/clientSettings.json'
  * make the selection authoritative we instead apply it over the WebSocket API
  * on every (re)start — see configureServers in liveSync.ts — which both sets
  * custom/local servers and resets to presets for public.
+ *
+ * The flag is also unsafe: an env `--server` is INSERTed into `protocol_servers`,
+ * unique on (user, host, port) and not on fingerprint, so a relay already in the
+ * database under an older fingerprint aborts startup with a UNIQUE constraint
+ * failure. Reinstalling a SimpleX Server produces exactly that.
  */
 
 /** StartOS package id of the self-hosted SimpleX Server (Local relays). */
@@ -146,8 +151,8 @@ export async function resolveServerUris(
 
 /**
  * Full start environment for the simplex daemon, plus the relays resolved on
- * the way — managed mode applies those over the WS once the socket answers,
- * rather than resolving the same addresses a second time.
+ * the way — both modes apply those over the WS once the socket answers, rather
+ * than resolving the same addresses a second time.
  */
 export async function computeStartEnv(
   effects: T.Effects,
@@ -170,26 +175,26 @@ export async function computeStartEnv(
     env.INBOUND_RETENTION_HOURS = String(settings.cleanupDays * 24)
   }
 
-  // Resolved in both modes, though only hands-off applies relays as env below:
-  // this read is what registers the `const` watch on the SimpleX Server's
-  // address, and it has to happen in main's body to bind to the service.
+  // Relays are never passed as env, in either mode. simplex-chat inserts an
+  // env `--server` into `protocol_servers`, which is unique on (user, host,
+  // port) and not on fingerprint — so a relay whose host and port are already
+  // in the database under an older fingerprint aborts startup with a UNIQUE
+  // constraint failure, exactly what a SimpleX Server reinstall produces. The
+  // operator-servers API replaces those rows instead, so both modes apply
+  // relays over the WS; see configureServers.
+  //
+  // The resolve still happens here because this read is what registers the
+  // `const` watch on the SimpleX Server's address, and it has to happen in
+  // main's body to bind to the service. An unresolvable relay is not fatal in
+  // either mode now: the watch re-runs main once the address appears.
   const servers = await resolveServerUris(effects, settings).catch(
     (err: unknown) => {
-      // Hands-off mode has no later chance to apply relays, so an unresolvable
-      // one fails the start rather than silently falling back to the presets.
-      if (!settings.manageProfile) throw err
+      console.warn(
+        `Relays could not be resolved at start; retrying when the address resolves. ${(err as Error).message}`,
+      )
       return null
     },
   )
-
-  // Hands-off mode: StartOS makes no WebSocket writes, so relays are applied
-  // via the image's env flags instead of the operator-servers API. (Managed
-  // mode leaves these unset and configures relays over the WS on start —
-  // env `--server` persists in the DB and can't be reset from the flag.)
-  if (!settings.manageProfile && servers) {
-    if (servers.smp.length) env.SMP_SERVERS = servers.smp.join(' ')
-    if (servers.xftp.length) env.XFTP_SERVERS = servers.xftp.join(' ')
-  }
 
   return { env, servers }
 }

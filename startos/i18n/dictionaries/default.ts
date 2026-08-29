@@ -102,7 +102,7 @@ const dict = {
 
   // configure client — profile management mode
   'SimpleX Profile': 93,
-  'Choose whether StartOS manages the client profile and address, or leaves them to your own application. When your application manages them, StartOS makes no changes to the running client over the Websocket — it only applies message relays and file cleanup at startup.': 94,
+  'Choose whether StartOS manages the client profile — display name, picture, and the other chat settings below — or leaves it to your own application. Message relays and file cleanup are managed by StartOS in either mode.': 94,
   'Managed by StartOS': 95,
   'Managed by my application': 96,
 } as const

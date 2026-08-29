@@ -34,7 +34,7 @@ Manage tokens in the **API Keys** action — each has a label (to identify the c
 
 Run the **Configure Client** action to set the client's identity and behavior. It writes a settings file the service reads on start, so you can run it **before the first start** to seed the identity.
 
-**Who manages the profile?** The "SimpleX Profile" option chooses between _Managed by StartOS_ (default) and _Managed by my application_. Pick the latter to drive the bridge from your own software that manages its own SimpleX identity: StartOS then makes no changes to the running client over the Websocket, and only applies message relays and received-file cleanup via container settings at startup. The profile fields below apply only in the StartOS-managed mode.
+**Who manages the profile?** The "SimpleX Profile" option chooses between _Managed by StartOS_ (default) and _Managed by my application_. Pick the latter to drive the bridge from your own software that manages its own SimpleX identity: StartOS then leaves the profile alone — display name, picture, and the other chat settings below are yours to set. Message relays and received-file cleanup are managed by StartOS in either mode. The profile fields below apply only in the StartOS-managed mode.
 
 - **Display Name** / **Full Name** — how the client presents to contacts.
 - **Profile Picture** — an image URL (http/https), a data URL, or base64; it is cropped to a square and shrunk automatically to fit SimpleX's avatar limit. Leave empty to remove it.

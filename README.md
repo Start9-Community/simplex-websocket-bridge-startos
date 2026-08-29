@@ -84,12 +84,14 @@ The store holds **the bearer tokens** that gate the WebSocket, each with a label
 
 Every field carries a default, so a partial or older file parses into a complete object rather than failing — and the settings file may legitimately not exist yet, since the configuration action is meant to be run **before** the first start.
 
-**How settings are applied depends on who owns the client**, and that is the single most important thing about this package:
+**The ownership choice covers the profile, and only the profile** — the display name, full name, picture, peer type, auto-accept, business mode and welcome message:
 
-- **Managed** — StartOS owns the profile. Relays go in as environment at start, and the profile, address settings, auto-accept and welcome message are reconciled over the WebSocket once the socket answers.
-- **Hands-off** — your application owns the client. StartOS makes **no** WebSocket writes at all; only relays and file cleanup are applied, as environment.
+- **Managed** — StartOS owns those fields and reconciles them over the WebSocket once the socket answers.
+- **Hands-off** — your application owns them, and StartOS leaves them alone.
 
 Choosing hands-off is what stops this package and your program fighting over the same profile.
+
+**Message relays are StartOS's in both modes.** They are applied over the WebSocket on every start and whenever the selection changes — never as container environment. An env `--server` is INSERTed into a table unique on host and port rather than on fingerprint, so a relay already stored under an older fingerprint aborts startup outright, which is exactly what reinstalling a SimpleX Server produces.
 
 ## Dependencies
 
@@ -101,7 +103,7 @@ One, optional, and **declared only while it is selected**.
 
 Relays can be SimpleX's public ones, your own SimpleX Server on this box, or a custom list. Only the middle option adds a dependency, and it is declared reactively — switching relay modes adds or drops it.
 
-**Choosing local relays without a reachable server fails the start**, deliberately, rather than silently falling back to the public presets. Being quietly moved onto someone else's relays is not an acceptable failure mode for this.
+**An unreachable local server never falls back to the public presets.** The relay is simply left unapplied, and the service watches the server's address and applies it once it resolves. Being quietly moved onto someone else's relays is not an acceptable failure mode for this.
 
 ## Network Access and Interfaces
 
@@ -123,7 +125,9 @@ Install seeds **one API key**, so the gate is active from the first start and th
 
 **The configuration action is meant to be run before the first start.** Doing so means the profile is created with the name, picture and relays you want, rather than created with defaults and then edited.
 
-The first start creates the SimpleX profile. In managed mode the package then waits for the socket to actually answer before syncing — the daemon ordering gates launch, not readiness, so syncing immediately would race the socket's bind. If that sync fails it is logged and the service keeps running, rather than the failure taking down a working bridge.
+The first start creates the SimpleX profile. The package then waits for the socket to actually answer before syncing — the daemon ordering gates launch, not readiness, so syncing immediately would race the socket's bind. If that sync fails it is logged and the service keeps running, rather than the failure taking down a working bridge.
+
+**In hands-off mode, set relays before the first start.** Because they are applied over the WebSocket rather than at launch, there is a brief window on a fresh profile where an application that connects immediately can act before the relay selection lands.
 
 ## Actions
 
@@ -136,7 +140,7 @@ Six actions, in two groups.
 Everything about the client: who owns the profile, the display and full name, the profile picture, whether it presents as a bot or a person, auto-accept, business mode, the welcome message, the relay selection, and received-file retention.
 
 - **Runnable at any status**, and intended to be run before the first start.
-- **Cost:** the service restarts to apply.
+- **Cost:** relays and profile apply live; changing file retention or the ownership mode restarts the service.
 - **The ownership choice is the important field** — see [File Models](#file-models).
 
 #### API Keys
@@ -206,8 +210,8 @@ The `main` volume is copied wholesale — `sdk.setupBackups(['main'])`. That is 
 1. **This is a bot bridge, not a chat client.** There is no interface for a human to read messages in.
 2. **A bearer token is the identity.** Anyone holding one can send and read as your client.
 3. **Same-box packages need no token**, because they bypass the proxy over the bridge.
-4. **Managed and hands-off modes are mutually exclusive**; running your own application against a managed profile means two writers.
-5. **Local relays fail the start when the server is unreachable**, rather than falling back to public ones.
+4. **Managed and hands-off modes are mutually exclusive**; running your own application against a managed profile means two writers. The choice covers the profile only — relays are StartOS's either way.
+5. **An unreachable local relay is never replaced by a public one**; it stays unapplied until the server resolves.
 6. **Reset Client is irreversible** and can strand a consumer's contact state — see the action.
 7. **The four file directories must stay siblings** on one filesystem, or receiving files breaks.
 8. **The backup reproduces the identity**, so never restore two copies.

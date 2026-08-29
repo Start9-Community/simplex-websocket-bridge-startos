@@ -134,7 +134,7 @@ const inputSpec = InputSpec.of({
   profile: Value.union({
     name: i18n('SimpleX Profile'),
     description: i18n(
-      'Choose whether StartOS manages the client profile and address, or leaves them to your own application. When your application manages them, StartOS makes no changes to the running client over the Websocket — it only applies message relays and file cleanup at startup.',
+      'Choose whether StartOS manages the client profile — display name, picture, and the other chat settings below — or leaves it to your own application. Message relays and file cleanup are managed by StartOS in either mode.',
     ),
     default: 'managed',
     variants: Variants.of({
@@ -328,26 +328,18 @@ export const configureClient = sdk.Action.withInput(
     const retentionChanged = previous.cleanupDays !== settings.cleanupDays
     const manageChanged = previous.manageProfile !== manageProfile
 
-    // Hands-off mode: StartOS makes no WebSocket writes. Relays and retention
-    // are container env (applied at launch), so any of those — or toggling the
-    // mode itself — takes effect on restart.
-    if (!manageProfile) {
-      if (relaysChanged || retentionChanged || manageChanged) {
-        await effects.restart()
-      }
-      return null
-    }
-
-    // Managed mode. Retention (env/janitor) and switching into managed mode
-    // both need a restart; the post-ready one-shot then re-applies everything.
+    // Retention is container env (the janitor reads it at launch) and toggling
+    // the mode changes what the post-ready one-shot reconciles, so both need a
+    // restart; the one-shot then re-applies everything.
     if (retentionChanged || manageChanged) {
       await effects.restart()
       return null
     }
 
-    // Otherwise apply live over the WebSocket — no restart, no downtime for
-    // dependents. Relays via configureServers, profile/address via the sync. A
-    // rejected relay config surfaces here so it's diagnosable immediately.
+    // Everything else applies live over the WebSocket — no restart, no downtime
+    // for dependents. Relays in either mode, profile/address only when StartOS
+    // manages it. A rejected relay config surfaces here so it's diagnosable
+    // immediately.
     try {
       if (relaysChanged) {
         await configureServers(
@@ -355,7 +347,7 @@ export const configureClient = sdk.Action.withInput(
           await resolveServerUris(effects, settings),
         )
       }
-      await syncClientSettings(effects, settings)
+      if (manageProfile) await syncClientSettings(effects, settings)
     } catch (err) {
       return {
         version: '1',

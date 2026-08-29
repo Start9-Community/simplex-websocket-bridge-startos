@@ -69,12 +69,6 @@ export const main = sdk.setupMain(async ({ effects }) => {
       requires: ['simplex'],
     })
 
-  // In hands-off mode the operator's own application owns the client, so we make
-  // no WebSocket writes — relays went in via env above, and there's nothing to
-  // sync. Only in managed mode do we reconcile relays + profile/address over the
-  // WS once the socket is reachable.
-  if (!settings.manageProfile) return daemons
-
   return daemons.addOneshot('sync-settings', {
     subcontainer,
     exec: {
@@ -87,7 +81,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
           // Apply the selected relays first (authoritative over the DB —
           // sets custom/local, resets public), then reconcile the profile.
           if (servers) await configureServers(effects, servers)
-          await syncClientSettings(effects, settings)
+          if (settings.manageProfile)
+            await syncClientSettings(effects, settings)
           console.info(i18n('SimpleX client settings synced'))
         } catch (err) {
           console.warn(
