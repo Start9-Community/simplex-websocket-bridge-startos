@@ -146,8 +146,26 @@ function applyProtocol(
 }
 
 /**
+ * The relay selection a group list expresses: tombstones dropped, each row
+ * reduced to address plus enabled. `applyProtocol` replaces custom rows rather
+ * than editing them, and replacements carry no `serverId`, so a rebuilt list
+ * never compares equal to the one it came from.
+ */
+function relaySelection(groups: ServerGroup[]): string {
+  const live = (rows: ServerRow[]) =>
+    rows.filter((r) => !r.deleted).map((r) => [r.server, r.enabled])
+  return JSON.stringify(
+    groups.map((g) => ({
+      operator: !!g.operator,
+      smp: live(g.smpServers ?? []),
+      xftp: live(g.xftpServers ?? []),
+    })),
+  )
+}
+
+/**
  * Apply already-resolved SMP/XFTP relays to the running client over the WS API,
- * making the chat database — not the removed `--server` env — authoritative.
+ * making the chat database rather than container env authoritative.
  * Sets custom/local servers and resets to the public presets, per protocol.
  *
  * Takes the URIs rather than resolving them so the caller owns when the
@@ -174,9 +192,12 @@ export async function configureServers(
       throw new Error(`Unexpected response reading servers: ${resp?.type}`)
     }
     const userServers = resp.userServers
+    const before = relaySelection(userServers)
 
     applyProtocol(userServers, 'smpServers', smp)
     applyProtocol(userServers, 'xftpServers', xftp)
+
+    if (relaySelection(userServers) === before) return
 
     assertNotCmdError(
       await send(`/_servers ${userId} ${JSON.stringify(userServers)}`),

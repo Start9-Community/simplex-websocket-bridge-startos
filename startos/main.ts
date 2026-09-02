@@ -21,14 +21,11 @@ export const main = sdk.setupMain(async ({ effects }) => {
   await mkdir(outboundDir, { recursive: true })
   await chmod(outboundDir, OUTBOUND_MODE)
 
-  // Compute the container's start environment from the saved client settings
-  // (or code defaults on a fresh install). Seeds the profile on first start and,
-  // in hands-off mode, applies relays via env. Throws (failing start) if the
-  // settings ask for something unresolvable — e.g. Local relays when the
-  // SimpleX Server dependency isn't reachable — rather than silently using
-  // public presets.
   const settings = await readClientSettings(effects)
   const { env, servers } = await computeStartEnv(effects, settings)
+
+  // A selection that never lands leaves the client on SimpleX's public presets.
+  let relaysPending = settings.servers.mode !== 'public'
 
   const subcontainer = sdk.SubContainer.of(
     effects,
@@ -54,51 +51,58 @@ export const main = sdk.setupMain(async ({ effects }) => {
       },
       requires: [],
     })
+    .addOneshot('sync-settings', {
+      subcontainer,
+      exec: {
+        fn: async () => {
+          try {
+            // The daemon `requires` gate orders launch, not socket readiness,
+            // so wait for the WebSocket to actually answer before syncing —
+            // otherwise the first connect races websocat's bind (ECONNREFUSED).
+            await waitForBotReady(effects)
+            // Apply the selected relays first (authoritative over the DB —
+            // sets custom/local, resets public), then reconcile the profile.
+            if (servers) {
+              await configureServers(effects, servers)
+              relaysPending = false
+            }
+            if (settings.manageProfile)
+              await syncClientSettings(effects, settings)
+            console.info(i18n('SimpleX client settings synced'))
+          } catch (err) {
+            console.warn(
+              i18n('Could not sync SimpleX client settings: ').concat(
+                (err as Error).message,
+              ),
+            )
+          }
+          return null
+        },
+      },
+      requires: ['simplex'],
+    })
     // Standalone health check with a stable ID ('websocket') that dependent
     // packages can reference in a `kind: 'running'` dependency requirement.
-    // Part of the file exchange contract (see README).
+    // Part of the file exchange contract (see README). Requiring the sync is
+    // what keeps a dependent from connecting ahead of the relay selection.
     .addHealthCheck('websocket', {
       ready: {
         display: i18n('Websocket'),
         fn: () =>
-          sdk.healthCheck.checkPortListening(effects, port, {
-            successMessage: i18n('Websocket is ready'),
-            errorMessage: i18n('Websocket is not ready'),
-          }),
+          relaysPending
+            ? {
+                result: 'failure',
+                message: i18n(
+                  'The selected message relays could not be applied, so the client would fall back to SimpleX public relays. Check that the SimpleX Server dependency is installed and running.',
+                ),
+              }
+            : sdk.healthCheck.checkPortListening(effects, port, {
+                successMessage: i18n('Websocket is ready'),
+                errorMessage: i18n('Websocket is not ready'),
+              }),
       },
-      requires: ['simplex'],
+      requires: ['simplex', 'sync-settings'],
     })
 
-  // In hands-off mode the operator's own application owns the client, so we make
-  // no WebSocket writes — relays went in via env above, and there's nothing to
-  // sync. Only in managed mode do we reconcile relays + profile/address over the
-  // WS once the socket is reachable.
-  if (!settings.manageProfile) return daemons
-
-  return daemons.addOneshot('sync-settings', {
-    subcontainer,
-    exec: {
-      fn: async () => {
-        try {
-          // The daemon `requires` gate orders launch, not socket readiness,
-          // so wait for the WebSocket to actually answer before syncing —
-          // otherwise the first connect races websocat's bind (ECONNREFUSED).
-          await waitForBotReady(effects)
-          // Apply the selected relays first (authoritative over the DB —
-          // sets custom/local, resets public), then reconcile the profile.
-          if (servers) await configureServers(effects, servers)
-          await syncClientSettings(effects, settings)
-          console.info(i18n('SimpleX client settings synced'))
-        } catch (err) {
-          console.warn(
-            i18n('Could not sync SimpleX client settings: ').concat(
-              (err as Error).message,
-            ),
-          )
-        }
-        return null
-      },
-    },
-    requires: ['simplex'],
-  })
+  return daemons
 })

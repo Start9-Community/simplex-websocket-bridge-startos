@@ -1,5 +1,6 @@
 import { T } from '@start9labs/start-sdk'
 import { sdk } from './sdk'
+import { i18n } from './i18n'
 import { ClientSettings } from './fileModels/clientSettings.json'
 
 /**
@@ -12,14 +13,16 @@ import { ClientSettings } from './fileModels/clientSettings.json'
  *   INBOUND_RETENTION_HOURS — positive integer; a janitor deletes received
  *       files older than this. Unset = keep forever.
  *
- * Message relays are deliberately NOT passed as env. simplex-chat persists the
- * `--server`/`--xftp-server` values into the per-user chat database, and the
- * built-in presets are only used when the DB has NO configured servers — so
- * once a custom/local server is set via the flag it sticks even after the flag
- * is removed, and dropping the flag never reverts to the public presets. To
- * make the selection authoritative we instead apply it over the WebSocket API
- * on every (re)start — see configureServers in liveSync.ts — which both sets
- * custom/local servers and resets to presets for public.
+ * Message relays are deliberately NOT passed as env, for two reasons.
+ * simplex-chat persists `--server`/`--xftp-server` into the per-user chat
+ * database and only falls back to the built-in presets when the DB has none, so
+ * a relay set by the flag sticks after the flag is removed and dropping it
+ * never reverts to the public presets. And the flag is unsafe: an env
+ * `--server` is INSERTed into `protocol_servers`, unique on (user, host, port)
+ * and not on fingerprint, so a relay already stored under an older fingerprint
+ * aborts startup with a UNIQUE constraint failure — which is what reinstalling
+ * a SimpleX Server produces. The selection is applied over the WebSocket API on
+ * every (re)start instead; see configureServers in liveSync.ts.
  */
 
 /** StartOS package id of the self-hosted SimpleX Server (Local relays). */
@@ -119,9 +122,9 @@ export interface ResolvedServerUris {
  *            / `xftp://<fingerprint>@host`); an empty side resets to presets.
  *   local  — auto-pull the user's own SimpleX Server SMP/XFTP addresses from
  *            its StartOS service interfaces (full URIs, fingerprint included).
- *            Fails fast if a relay can't be resolved rather than silently
- *            falling back to presets — choosing self-hosted relays is a
- *            deliberate opt-out.
+ *            Throws if a relay can't be resolved; main leaves the selection
+ *            unapplied and reports the service unhealthy rather than letting
+ *            it fall back to the presets.
  */
 export async function resolveServerUris(
   effects: T.Effects,
@@ -146,8 +149,8 @@ export async function resolveServerUris(
 
 /**
  * Full start environment for the simplex daemon, plus the relays resolved on
- * the way — managed mode applies those over the WS once the socket answers,
- * rather than resolving the same addresses a second time.
+ * the way — both modes apply those over the WS once the socket answers, rather
+ * than resolving the same addresses a second time.
  */
 export async function computeStartEnv(
   effects: T.Effects,
@@ -170,26 +173,18 @@ export async function computeStartEnv(
     env.INBOUND_RETENTION_HOURS = String(settings.cleanupDays * 24)
   }
 
-  // Resolved in both modes, though only hands-off applies relays as env below:
-  // this read is what registers the `const` watch on the SimpleX Server's
+  // This read is what registers the `const` watch on the SimpleX Server's
   // address, and it has to happen in main's body to bind to the service.
   const servers = await resolveServerUris(effects, settings).catch(
     (err: unknown) => {
-      // Hands-off mode has no later chance to apply relays, so an unresolvable
-      // one fails the start rather than silently falling back to the presets.
-      if (!settings.manageProfile) throw err
+      console.warn(
+        i18n('Message relays could not be resolved at start: ').concat(
+          (err as Error).message,
+        ),
+      )
       return null
     },
   )
-
-  // Hands-off mode: StartOS makes no WebSocket writes, so relays are applied
-  // via the image's env flags instead of the operator-servers API. (Managed
-  // mode leaves these unset and configures relays over the WS on start —
-  // env `--server` persists in the DB and can't be reset from the flag.)
-  if (!settings.manageProfile && servers) {
-    if (servers.smp.length) env.SMP_SERVERS = servers.smp.join(' ')
-    if (servers.xftp.length) env.XFTP_SERVERS = servers.xftp.join(' ')
-  }
 
   return { env, servers }
 }
