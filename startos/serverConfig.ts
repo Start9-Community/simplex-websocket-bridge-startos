@@ -1,5 +1,6 @@
 import { T } from '@start9labs/start-sdk'
 import { sdk } from './sdk'
+import { i18n } from './i18n'
 import { ClientSettings } from './fileModels/clientSettings.json'
 
 /**
@@ -12,19 +13,16 @@ import { ClientSettings } from './fileModels/clientSettings.json'
  *   INBOUND_RETENTION_HOURS — positive integer; a janitor deletes received
  *       files older than this. Unset = keep forever.
  *
- * Message relays are deliberately NOT passed as env. simplex-chat persists the
- * `--server`/`--xftp-server` values into the per-user chat database, and the
- * built-in presets are only used when the DB has NO configured servers — so
- * once a custom/local server is set via the flag it sticks even after the flag
- * is removed, and dropping the flag never reverts to the public presets. To
- * make the selection authoritative we instead apply it over the WebSocket API
- * on every (re)start — see configureServers in liveSync.ts — which both sets
- * custom/local servers and resets to presets for public.
- *
- * The flag is also unsafe: an env `--server` is INSERTed into `protocol_servers`,
- * unique on (user, host, port) and not on fingerprint, so a relay already in the
- * database under an older fingerprint aborts startup with a UNIQUE constraint
- * failure. Reinstalling a SimpleX Server produces exactly that.
+ * Message relays are deliberately NOT passed as env, for two reasons.
+ * simplex-chat persists `--server`/`--xftp-server` into the per-user chat
+ * database and only falls back to the built-in presets when the DB has none, so
+ * a relay set by the flag sticks after the flag is removed and dropping it
+ * never reverts to the public presets. And the flag is unsafe: an env
+ * `--server` is INSERTed into `protocol_servers`, unique on (user, host, port)
+ * and not on fingerprint, so a relay already stored under an older fingerprint
+ * aborts startup with a UNIQUE constraint failure — which is what reinstalling
+ * a SimpleX Server produces. The selection is applied over the WebSocket API on
+ * every (re)start instead; see configureServers in liveSync.ts.
  */
 
 /** StartOS package id of the self-hosted SimpleX Server (Local relays). */
@@ -124,9 +122,9 @@ export interface ResolvedServerUris {
  *            / `xftp://<fingerprint>@host`); an empty side resets to presets.
  *   local  — auto-pull the user's own SimpleX Server SMP/XFTP addresses from
  *            its StartOS service interfaces (full URIs, fingerprint included).
- *            Fails fast if a relay can't be resolved rather than silently
- *            falling back to presets — choosing self-hosted relays is a
- *            deliberate opt-out.
+ *            Throws if a relay can't be resolved; main leaves the selection
+ *            unapplied and reports the service unhealthy rather than letting
+ *            it fall back to the presets.
  */
 export async function resolveServerUris(
   effects: T.Effects,
@@ -175,22 +173,14 @@ export async function computeStartEnv(
     env.INBOUND_RETENTION_HOURS = String(settings.cleanupDays * 24)
   }
 
-  // Relays are never passed as env, in either mode. simplex-chat inserts an
-  // env `--server` into `protocol_servers`, which is unique on (user, host,
-  // port) and not on fingerprint — so a relay whose host and port are already
-  // in the database under an older fingerprint aborts startup with a UNIQUE
-  // constraint failure, exactly what a SimpleX Server reinstall produces. The
-  // operator-servers API replaces those rows instead, so both modes apply
-  // relays over the WS; see configureServers.
-  //
-  // The resolve still happens here because this read is what registers the
-  // `const` watch on the SimpleX Server's address, and it has to happen in
-  // main's body to bind to the service. An unresolvable relay is not fatal in
-  // either mode now: the watch re-runs main once the address appears.
+  // This read is what registers the `const` watch on the SimpleX Server's
+  // address, and it has to happen in main's body to bind to the service.
   const servers = await resolveServerUris(effects, settings).catch(
     (err: unknown) => {
       console.warn(
-        `Relays could not be resolved at start; retrying when the address resolves. ${(err as Error).message}`,
+        i18n('Message relays could not be resolved at start: ').concat(
+          (err as Error).message,
+        ),
       )
       return null
     },

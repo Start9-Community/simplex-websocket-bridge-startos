@@ -103,7 +103,7 @@ One, optional, and **declared only while it is selected**.
 
 Relays can be SimpleX's public ones, your own SimpleX Server on this box, or a custom list. Only the middle option adds a dependency, and it is declared reactively — switching relay modes adds or drops it.
 
-**An unreachable local server never falls back to the public presets.** The relay is simply left unapplied, and the service watches the server's address and applies it once it resolves. Being quietly moved onto someone else's relays is not an acceptable failure mode for this.
+**An unreachable local server never falls back to the public presets.** The selection is left unapplied, the `websocket` health check reports unhealthy so dependents do not start against it, and the service watches the server's address and applies it once it resolves. Being quietly moved onto someone else's relays is not an acceptable failure mode for this.
 
 ## Network Access and Interfaces
 
@@ -125,9 +125,9 @@ Install seeds **one API key**, so the gate is active from the first start and th
 
 **The configuration action is meant to be run before the first start.** Doing so means the profile is created with the name, picture and relays you want, rather than created with defaults and then edited.
 
-The first start creates the SimpleX profile. The package then waits for the socket to actually answer before syncing — the daemon ordering gates launch, not readiness, so syncing immediately would race the socket's bind. If that sync fails it is logged and the service keeps running, rather than the failure taking down a working bridge.
+The first start creates the SimpleX profile. The package then waits for the socket to actually answer before syncing — the daemon ordering gates launch, not readiness, so syncing immediately would race the socket's bind. If it fails the service keeps running rather than the failure taking down a working bridge — but a relay selection left unapplied turns the `websocket` check red, so it is not a silent failure.
 
-**In hands-off mode, set relays before the first start.** Because they are applied over the WebSocket rather than at launch, there is a brief window on a fresh profile where an application that connects immediately can act before the relay selection lands.
+Relays land in that same sync, and the `websocket` health check waits for it — so a dependent package never connects before the selection is in place. A client dialing the interface from outside with a bearer token is not gated by health, so set relays before the first start if you drive the bridge that way.
 
 ## Actions
 
@@ -140,7 +140,7 @@ Six actions, in two groups.
 Everything about the client: who owns the profile, the display and full name, the profile picture, whether it presents as a bot or a person, auto-accept, business mode, the welcome message, the relay selection, and received-file retention.
 
 - **Runnable at any status**, and intended to be run before the first start.
-- **Cost:** relays and profile apply live; changing file retention or the ownership mode restarts the service.
+- **Cost:** relays and profile apply live; only changing file retention restarts the service.
 - **The ownership choice is the important field** — see [File Models](#file-models).
 
 #### API Keys
@@ -186,16 +186,16 @@ None. This package raises no tasks, so the service is never held on a prompt and
 
 ## Health Checks
 
-Two checks over the same port, and the duplication is deliberate.
+Two checks, and the duplication is deliberate.
 
-| Check       | Displayed as | Method                 |
-| ----------- | ------------ | ---------------------- |
-| `simplex`   | — internal   | Port 5225 is listening |
-| `websocket` | "Websocket"  | Port 5225 is listening |
+| Check       | Displayed as | Method                                                            |
+| ----------- | ------------ | ----------------------------------------------------------------- |
+| `simplex`   | — internal   | Port 5225 is listening                                            |
+| `websocket` | "Websocket"  | The relay selection has been applied, and port 5225 is listening  |
 
-The daemon's own check is hidden; the standalone one is shown. **The standalone check exists because it has a stable id that dependent packages can require** in their dependency declaration — a daemon's own check is not a contract in the same way.
+The daemon's own check is hidden; the standalone one is shown. **The standalone check exists because it has a stable id that dependent packages can require** in their dependency declaration — a daemon's own check is not a contract in the same way. It also requires the `sync-settings` one-shot, which is what holds dependents back until the selected relays are actually in effect.
 
-Neither says anything about SimpleX itself. Unreachable relays, a failed message, or a contact who never connects all show a green check.
+Beyond the relay selection, neither says anything about SimpleX itself: a failed message or a contact who never connects both show a green check.
 
 ## Backups and Restore
 
@@ -211,7 +211,7 @@ The `main` volume is copied wholesale — `sdk.setupBackups(['main'])`. That is 
 2. **A bearer token is the identity.** Anyone holding one can send and read as your client.
 3. **Same-box packages need no token**, because they bypass the proxy over the bridge.
 4. **Managed and hands-off modes are mutually exclusive**; running your own application against a managed profile means two writers. The choice covers the profile only — relays are StartOS's either way.
-5. **An unreachable local relay is never replaced by a public one**; it stays unapplied until the server resolves.
+5. **An unreachable local relay is never replaced by a public one**; the bridge reports unhealthy until the server resolves.
 6. **Reset Client is irreversible** and can strand a consumer's contact state — see the action.
 7. **The four file directories must stay siblings** on one filesystem, or receiving files breaks.
 8. **The backup reproduces the identity**, so never restore two copies.

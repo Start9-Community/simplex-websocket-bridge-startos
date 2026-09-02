@@ -85,6 +85,8 @@ export default {
     94: 'Elige si StartOS gestiona el perfil del cliente —nombre visible, imagen y el resto de ajustes de chat de abajo— o lo deja a tu propia aplicación. Los relés de mensajes y la limpieza de archivos los gestiona StartOS en cualquiera de los dos modos.',
     95: 'Gestionado por StartOS',
     96: 'Gestionado por mi aplicación',
+    97: 'No se pudieron resolver los relés de mensajes al iniciar: ',
+    98: 'No se pudieron aplicar los relés de mensajes seleccionados, por lo que el cliente recurriría a los relés públicos de SimpleX. Comprueba que la dependencia SimpleX Server esté instalada y en ejecución.',
   },
   de_DE: {
     0: 'SimpleX Websocket Bridge wird gestartet!',
@@ -170,6 +172,8 @@ export default {
     94: 'Wähle, ob StartOS das Client-Profil verwaltet — Anzeigename, Bild und die übrigen Chat-Einstellungen unten — oder es deiner eigenen Anwendung überlässt. Nachrichten-Relays und Dateibereinigung verwaltet StartOS in beiden Modi.',
     95: 'Von StartOS verwaltet',
     96: 'Von meiner Anwendung verwaltet',
+    97: 'Nachrichten-Relays konnten beim Start nicht aufgelöst werden: ',
+    98: 'Die ausgewählten Nachrichten-Relays konnten nicht angewendet werden, sodass der Client auf die öffentlichen SimpleX-Relays zurückfallen würde. Prüfe, ob die Abhängigkeit SimpleX Server installiert ist und läuft.',
   },
   pl_PL: {
     0: 'Uruchamianie SimpleX Websocket Bridge!',
@@ -255,6 +259,8 @@ export default {
     94: 'Wybierz, czy StartOS zarządza profilem klienta — nazwą wyświetlaną, obrazem i pozostałymi ustawieniami czatu poniżej — czy pozostawia go Twojej własnej aplikacji. Przekaźnikami wiadomości i czyszczeniem plików StartOS zarządza w obu trybach.',
     95: 'Zarządzane przez StartOS',
     96: 'Zarządzane przez moją aplikację',
+    97: 'Nie udało się ustalić przekaźników wiadomości przy uruchamianiu: ',
+    98: 'Nie udało się zastosować wybranych przekaźników wiadomości, więc klient korzystałby z publicznych przekaźników SimpleX. Sprawdź, czy zależność SimpleX Server jest zainstalowana i uruchomiona.',
   },
   fr_FR: {
     0: 'Démarrage de SimpleX Websocket Bridge !',
@@ -340,5 +346,7 @@ export default {
     94: 'Choisissez si StartOS gère le profil du client — nom affiché, image et les autres paramètres de chat ci-dessous — ou le laisse à votre propre application. Les relais de messages et le nettoyage des fichiers sont gérés par StartOS dans les deux modes.',
     95: 'Géré par StartOS',
     96: 'Géré par mon application',
+    97: 'Les relais de messages n’ont pas pu être résolus au démarrage : ',
+    98: 'Les relais de messages sélectionnés n’ont pas pu être appliqués, le client se rabattrait donc sur les relais publics SimpleX. Vérifiez que la dépendance SimpleX Server est installée et en cours d’exécution.',
   },
 } satisfies Record<string, LangDict>

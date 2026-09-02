@@ -325,21 +325,15 @@ export const configureClient = sdk.Action.withInput(
       previous.servers.mode !== settings.servers.mode ||
       previous.servers.smp.join(' ') !== settings.servers.smp.join(' ') ||
       previous.servers.xftp.join(' ') !== settings.servers.xftp.join(' ')
-    const retentionChanged = previous.cleanupDays !== settings.cleanupDays
-    const manageChanged = previous.manageProfile !== manageProfile
 
-    // Retention is container env (the janitor reads it at launch) and toggling
-    // the mode changes what the post-ready one-shot reconciles, so both need a
-    // restart; the one-shot then re-applies everything.
-    if (retentionChanged || manageChanged) {
+    // Retention is container env — the janitor reads it at launch.
+    if (previous.cleanupDays !== settings.cleanupDays) {
       await effects.restart()
       return null
     }
 
     // Everything else applies live over the WebSocket — no restart, no downtime
-    // for dependents. Relays in either mode, profile/address only when StartOS
-    // manages it. A rejected relay config surfaces here so it's diagnosable
-    // immediately.
+    // for dependents. A rejected relay config surfaces here, not in the logs.
     try {
       if (relaysChanged) {
         await configureServers(

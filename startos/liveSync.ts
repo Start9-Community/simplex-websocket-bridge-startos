@@ -146,14 +146,10 @@ function applyProtocol(
 }
 
 /**
- * The relay selection a group list expresses, ignoring everything the client
- * owns — `serverId` above all.
- *
- * `applyProtocol` can't edit a custom row in place: it tombstones the old rows
- * and appends replacements, so a rebuilt list never compares equal to the one
- * it came from even when the selection is identical. Dropping tombstones and
- * keeping only address + enabled leaves exactly what the operator chose, which
- * is the thing worth writing for.
+ * The relay selection a group list expresses: tombstones dropped, each row
+ * reduced to address plus enabled. `applyProtocol` replaces custom rows rather
+ * than editing them, and replacements carry no `serverId`, so a rebuilt list
+ * never compares equal to the one it came from.
  */
 function relaySelection(groups: ServerGroup[]): string {
   const live = (rows: ServerRow[]) =>
@@ -169,7 +165,7 @@ function relaySelection(groups: ServerGroup[]): string {
 
 /**
  * Apply already-resolved SMP/XFTP relays to the running client over the WS API,
- * making the chat database — not the removed `--server` env — authoritative.
+ * making the chat database rather than container env authoritative.
  * Sets custom/local servers and resets to the public presets, per protocol.
  *
  * Takes the URIs rather than resolving them so the caller owns when the
@@ -201,9 +197,6 @@ export async function configureServers(
     applyProtocol(userServers, 'smpServers', smp)
     applyProtocol(userServers, 'xftpServers', xftp)
 
-    // Every start re-applies the same selection, and writing it back deletes
-    // and recreates each custom row — new `serverId`s, a chat-database write,
-    // and nothing to show for it. Only write when the selection actually moved.
     if (relaySelection(userServers) === before) return
 
     assertNotCmdError(

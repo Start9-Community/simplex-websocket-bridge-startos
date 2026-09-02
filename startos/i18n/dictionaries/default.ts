@@ -105,6 +105,10 @@ const dict = {
   'Choose whether StartOS manages the client profile — display name, picture, and the other chat settings below — or leaves it to your own application. Message relays and file cleanup are managed by StartOS in either mode.': 94,
   'Managed by StartOS': 95,
   'Managed by my application': 96,
+
+  // message relays
+  'Message relays could not be resolved at start: ': 97,
+  'The selected message relays could not be applied, so the client would fall back to SimpleX public relays. Check that the SimpleX Server dependency is installed and running.': 98,
 } as const
 
 /**
