@@ -11,16 +11,17 @@ This service has no human chat interface — it is driven entirely by your own s
 ## What you get on StartOS
 
 - A **Websocket API** to the SimpleX network, gated by an API key, that your bots, AI agents, scripts, and other StartOS services can drive.
-- **Actions** to configure the client (identity, message relays, file retention), mint one-time invitation links, manage API keys, and reset the client.
+- **Actions** to configure the client (identity, message relays, file retention), mint one-time invitation links, create or revoke API keys, and reset the client.
 - A **shared-volume file-exchange contract** other StartOS packages can opt into to send and receive files through the bridge.
 
 ## Getting set up
 
-1. Start the service.
-2. Open the **API Keys** action and copy the key created on install (or add your own). Outside clients send it as `Authorization: Bearer <token>`.
-3. Open **Interfaces → Websocket** and copy the URL StartOS publishes for your network (LAN, Tor, etc.).
-4. Connect any Websocket client to that URL with the bearer token, then drive it with the SimpleX protocol (see Documentation).
-5. To give someone a way to reach the bridge, run the **Create SimpleX Invitation** action and share the link or QR — they paste it into their SimpleX client.
+1. Run **Configure Client** before the first start to choose the profile and message relays.
+2. Start the service.
+3. For an outside client, run **Create API Key** and copy the returned token. It is shown only when created.
+4. Open **Interfaces → Websocket** and copy the URL StartOS publishes for your network (LAN, Tor, etc.).
+5. Connect any Websocket client to that URL with the bearer token, then drive it with the SimpleX protocol (see Documentation).
+6. To give someone a way to reach the bridge, run the **Create SimpleX Invitation** action and share the link or QR — they paste it into their SimpleX client.
 
 On-box StartOS services that depend on this package connect directly and do not need an API key.
 
@@ -28,7 +29,7 @@ On-box StartOS services that depend on this package connect directly and do not 
 
 Outside access to the Websocket API is gated by a bearer token at the StartOS reverse proxy: connect with `Authorization: Bearer <token>` on the Websocket upgrade — requests without a valid token get `401` and never reach the bridge.
 
-Manage tokens in the **API Keys** action — each has a label (to identify the client) and a generated token. Add one per client; delete one to revoke its access.
+Run **Create API Key** once per outside client and copy the returned token immediately. Run **Revoke API Key** to remove a client's access; revocation takes effect without restarting the service.
 
 ## Configuring the client
 

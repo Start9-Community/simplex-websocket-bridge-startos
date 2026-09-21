@@ -49,23 +49,22 @@ One image, consumed as published.
 
 **The image ships SimpleX Chat unmodified**, which is why the package declares two licences: the packaging is MIT, the bundled application is AGPL, and what is distributed is the aggregate.
 
-**The image tag carries two version numbers.** The leading part is the SimpleX version; the trailing revision is a rebuild of the same SimpleX version, and it moves independently. Bump it deliberately.
-
 ## Volume and Data Layout
 
-One volume, and the layout under it is a published contract.
+The file-exchange layout under `main` is a published contract. Package-owned API credentials live separately so the upstream container cannot read them.
 
-| Volume | Mount Point | Purpose                               |
-| ------ | ----------- | ------------------------------------- |
-| `main` | `/data`     | The SimpleX profile and file exchange |
+| Volume    | Mount Point | Purpose                               |
+| --------- | ----------- | ------------------------------------- |
+| `main`    | `/data`     | The SimpleX profile and file exchange |
+| `startos` | Not mounted | Package-owned API credential storage  |
 
-| Path                | Written by         | Holds                               |
-| ------------------- | ------------------ | ----------------------------------- |
-| `.simplex/`         | SimpleX            | The profile database — the identity |
-| `.simplex/files`    | SimpleX            | Files received from contacts        |
-| `.simplex/tmp`      | SimpleX            | In-flight downloads                 |
-| `.simplex/outbound` | Other packages     | Files staged to be sent             |
-| `store.json`        | Init and an action | The API keys                        |
+| Path                   | Written by     | Holds                               |
+| ---------------------- | -------------- | ----------------------------------- |
+| `.simplex/`            | SimpleX        | The profile database — the identity |
+| `.simplex/files`       | SimpleX        | Files received from contacts        |
+| `.simplex/tmp`         | SimpleX        | In-flight downloads                 |
+| `.simplex/outbound`    | Other packages | Files staged to be sent             |
+| `client-settings.json` | An action      | StartOS-managed client settings     |
 
 **All four directories are siblings on one filesystem on purpose.** SimpleX completes a download by renaming out of its temp directory into its files directory, and a rename across filesystems fails — so splitting them across mounts would break receiving files rather than merely rearranging them. Their paths are pinned by environment rather than left to the image's defaults, so the layout is a contract and not an accident.
 
@@ -75,12 +74,12 @@ One volume, and the layout under it is a published contract.
 
 Two models, with a clean split of ownership.
 
-| File                  | Format | Modelled                | Written by          |
-| --------------------- | ------ | ----------------------- | ------------------- |
-| `store.json`          | JSON   | Yes — `FileHelper.json` | Init and the action |
-| `clientSettings.json` | JSON   | Yes                     | The action          |
+| File                   | Volume    | Format | Written by            |
+| ---------------------- | --------- | ------ | --------------------- |
+| `store.json`           | `startos` | JSON   | Create/Revoke API Key |
+| `client-settings.json` | `main`    | JSON   | Configure Client      |
 
-The store holds **the bearer tokens** that gate the WebSocket, each with a label. The settings file holds everything about the client: the display name and profile, whether contact requests are auto-accepted, business mode, a welcome message, the relay selection, and how long received files are kept.
+The mountless store holds **the bearer tokens** that gate the WebSocket, each with a label. The settings file holds everything about the client: the display name and profile, whether contact requests are auto-accepted, business mode, a welcome message, the relay selection, and how long received files are kept.
 
 Every field carries a default, so a partial or older file parses into a complete object rather than failing — and the settings file may legitimately not exist yet, since the configuration action is meant to be run **before** the first start.
 
@@ -113,7 +112,7 @@ One interface, and it is authenticated.
 | --------- | ---- | ---- | ---- | -------------------------------------------- |
 | Websocket | `ws` | api  | 5225 | The API for driving SimpleX programmatically |
 
-**Bearer authentication is applied at the StartOS reverse proxy**, not by the application: an outside client must send a token from the store or receive a 401 before it ever reaches the container. The token set is read reactively, so adding or revoking a key takes effect without a restart.
+**Bearer authentication is applied at the StartOS reverse proxy**, not by the application: an outside client must send a token from the store or receive a 401 before it ever reaches the container. The token set is read reactively, so creating or revoking a key takes effect without a restart.
 
 **Same-box packages bypass that gate**, because they dial the container's bridge address directly and that path does not traverse the proxy. So a dependent service needs no token, and a token is only for something outside the server.
 
@@ -121,7 +120,7 @@ One interface, and it is authenticated.
 
 ## Installation and First-Run Flow
 
-Install seeds **one API key**, so the gate is active from the first start and there is a working token to copy. It is seeded only at install and never re-seeded, which is what makes deleting every key a durable way to lock outside access.
+A fresh install accepts no outside API clients. Run **Create API Key** when an outside client needs access; same-box dependents require no token.
 
 **The configuration action is meant to be run before the first start.** Doing so means the profile is created with the name, picture and relays you want, rather than created with defaults and then edited.
 
@@ -131,7 +130,7 @@ Relays land in that same sync, and the `websocket` health check waits for it —
 
 ## Actions
 
-Six actions, in two groups.
+Seven actions, in two groups.
 
 ### General
 
@@ -143,12 +142,13 @@ Everything about the client: who owns the profile, the display and full name, th
 - **Cost:** relays and profile apply live; only changing file retention restarts the service.
 - **The ownership choice is the important field** — see [File Models](#file-models).
 
-#### API Keys
+#### Create API Key
 
-Manages the bearer tokens that gate outside access.
+Generates a bearer token for one outside client. The token is returned once as a masked, copyable value and is not shown again.
 
-- **What it changes:** the token list, which the interface picks up reactively.
-- **Deleting every key locks out all outside access** while leaving same-box dependents working.
+#### Revoke API Key
+
+Removes a selected client credential. The interface picks up the change reactively, so revocation takes effect without restarting the service.
 
 #### Create SimpleX Invitation
 
@@ -188,10 +188,10 @@ None. This package raises no tasks, so the service is never held on a prompt and
 
 Two checks, and the duplication is deliberate.
 
-| Check       | Displayed as | Method                                                            |
-| ----------- | ------------ | ----------------------------------------------------------------- |
-| `simplex`   | — internal   | Port 5225 is listening                                            |
-| `websocket` | "Websocket"  | The relay selection has been applied, and port 5225 is listening  |
+| Check       | Displayed as | Method                                                           |
+| ----------- | ------------ | ---------------------------------------------------------------- |
+| `simplex`   | — internal   | Port 5225 is listening                                           |
+| `websocket` | "Websocket"  | The relay selection has been applied, and port 5225 is listening |
 
 The daemon's own check is hidden; the standalone one is shown. **The standalone check exists because it has a stable id that dependent packages can require** in their dependency declaration — a daemon's own check is not a contract in the same way. It also requires the `sync-settings` one-shot, which is what holds dependents back until the selected relays are actually in effect.
 
@@ -199,7 +199,7 @@ Beyond the relay selection, neither says anything about SimpleX itself: a failed
 
 ## Backups and Restore
 
-The `main` volume is copied wholesale — `sdk.setupBackups(['main'])`. That is the profile database, the received files, whatever is staged in the outbound directory, and the API keys.
+Both volumes are copied wholesale. Together they contain the profile database, received files, anything staged in the outbound directory, client settings, and API keys.
 
 **The backup is the identity.** Restoring it reproduces the same SimpleX client with the same contacts and the same address — which is what makes it worth having, and what makes it as sensitive as the messages themselves.
 
@@ -222,17 +222,18 @@ The `main` volume is copied wholesale — `sdk.setupBackups(['main'])`. That is 
 
 ```yaml
 package_id: simplex-websocket-bridge
-image: lundog/simplex-websocket-bridge # tag is <simplex-version>-<image-revision>
+image: lundog/simplex-websocket-bridge
 architectures:
   - x86_64
   - aarch64
 subcontainers:
   - simplex-sub
 volumes:
-  main: /data # .simplex/{,files,tmp,outbound} plus store.json — siblings on one fs
+  main: /data # .simplex/{,files,tmp,outbound} — siblings on one fs
+  startos: null # mountless API credential storage
 file_models:
-  - store.json # apiKeys: [{ label, token }]
-  - clientSettings.json # profile, relays, retention, and who owns the client
+  - store.json # apiKeys: [{ label, token }], on startos
+  - client-settings.json # profile, relays, retention, and who owns the client
 startos_managed_env_vars: [] # computed per-start from clientSettings; see serverConfig.ts
 dependencies:
   - simplex # optional, kind: running, only while relay mode is `local`
@@ -240,7 +241,8 @@ interfaces:
   ws: { type: api, port: 5225 } # bearer auth at the OS proxy; bridge callers bypass it
 actions:
   - configure-client # run before first start
-  - api-keys
+  - create-api-key
+  - revoke-api-key
   - create-invitation # only-running
   - view-address # only-running
   - reset-address # only-running, Danger Zone

@@ -4,7 +4,7 @@ import { i18n } from './i18n'
 import { storeJson } from './fileModels/store.json'
 
 export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
-  // Read the API keys reactively: when the API Keys action rewrites them,
+  // Read the API keys reactively: when an API key action rewrites them,
   // setupInterfaces re-runs and the OS reverse proxy picks up the new token set.
   const apiKeys = await storeJson.read((s) => s.apiKeys).const(effects)
   const tokens = (apiKeys ?? []).map((k) => k.token)
@@ -25,7 +25,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     id: 'ws',
     description: i18n('Websocket API for driving SimpleX programmatically'),
     type: 'api',
-    masked: false,
+    masked: true,
     schemeOverride: { ssl: 'wss', noSsl: 'ws' },
     username: null,
     path: '',

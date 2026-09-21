@@ -36,7 +36,7 @@ const dict = {
   'Client Reset': 32,
   'The SimpleX identity, all contacts, and chat history have been deleted; your API keys are kept. Start the service to create a fresh identity. Every previous contact must reconnect with a new invitation or address — if this client is used with OpenClaw, purge the channel state before they do.': 33,
 
-  // api-keys action
+  // 34–42 retired with the combined API Keys action.
   'API Keys': 34,
   'Manage the bearer tokens that gate outside access to the Websocket API.': 35,
   'Bearer tokens that grant outside access to the Websocket API. Add one per client; delete to revoke. On-box services connect directly and never need a key.': 36,
@@ -109,6 +109,24 @@ const dict = {
   // message relays
   'Message relays could not be resolved at start: ': 97,
   'The selected message relays could not be applied, so the client would fall back to SimpleX public relays. Check that the SimpleX Server dependency is installed and running.': 98,
+
+  // API key actions
+  'Create API Key': 99,
+  'Generate a bearer token for an outside client of the Websocket API.': 100,
+  'The label must contain a visible character.': 101,
+  'An API key with this label already exists.': 102,
+  'API Key Created': 103,
+  'Copy this token now. It will not be shown again.': 104,
+  'Revoke API Key': 105,
+  'Stop an outside client from using the Websocket API.': 106,
+  'No API keys to revoke': 107,
+  'API Key': 108,
+  'Select the key to revoke.': 109,
+  'Nothing to Revoke': 110,
+  'This service has no API keys.': 111,
+  'The selected API key no longer exists.': 112,
+  'API Key Revoked': 113,
+  'The selected key no longer grants access.': 114,
 } as const
 
 /**
