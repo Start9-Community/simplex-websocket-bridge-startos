@@ -33,8 +33,6 @@ export const resetClient = sdk.Action.withoutInput(
     try {
       const entries = await fs.readdir(VOLUME_PATH)
       for (const entry of entries) {
-        // Keep store.json — API keys are bridge access config, not bot identity.
-        if (entry === 'store.json') continue
         await fs.rm(path.join(VOLUME_PATH, entry), {
           recursive: true,
           force: true,

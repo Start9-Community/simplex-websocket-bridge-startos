@@ -13,10 +13,10 @@ export const port = 5225
 export const OUTBOUND_MODE = 0o1777
 
 /**
- * A single mount: the `main` volume at /data (HOME). Everything SimpleX lives
- * under /data/.simplex — the profile database and `store.json`, plus the image's
- * file dirs `files` (received, `--files-folder`), `tmp` (`--temp-folder`), and
- * `outbound` (consumer-written, for the bridge to send). All siblings on one
+ * A single container mount: the `main` volume at /data (HOME). SimpleX keeps
+ * its profile database under /data/.simplex alongside the image's file dirs
+ * `files` (received, `--files-folder`), `tmp` (`--temp-folder`), and `outbound`
+ * (consumer-written, for the bridge to send). All siblings on one
  * filesystem, so simplex-chat's atomic tmp->files rename can't hit EXDEV. (The
  * file-exchange paths are pinned via env in serverConfig.ts so the contract is
  * independent of the image's $HOME-derived defaults.)

@@ -14,7 +14,7 @@ export const manifest = setupManifest({
   donationUrl:
     'https://github.com/simplex-chat/simplex-chat#help-us-with-donations',
   description: { short, long },
-  volumes: ['main'],
+  volumes: ['main', 'startos'],
   images: {
     // Consume the standalone container image published from
     // github.com/lundog/simplex-websocket-bridge-docker, rather than building
