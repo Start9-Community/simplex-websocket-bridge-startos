@@ -1,7 +1,7 @@
 import { CR } from '@simplex-chat/types'
 import { sdk } from '../sdk'
 import { withBotSession } from '../bot-client'
-import { connLinkMembers } from '../links'
+import { connLinkMembers } from '../utils'
 import { i18n } from '../i18n'
 
 /**
