@@ -29,7 +29,7 @@ On-box StartOS services that depend on this package connect directly and do not 
 
 Outside access to the Websocket API is gated by a bearer token at the StartOS reverse proxy: connect with `Authorization: Bearer <token>` on the Websocket upgrade — requests without a valid token get `401` and never reach the bridge.
 
-Run **Create API Key** once per outside client and copy the returned token immediately. Run **Revoke API Key** to remove a client's access; revocation takes effect without restarting the service.
+Run **Create API Key** once per outside client and copy the returned token immediately. Run **Revoke API Key** and pick that client's key to remove its access; revocation takes effect without restarting the service.
 
 ## Configuring the client
 
@@ -40,7 +40,7 @@ Run the **Configure Client** action to set the client's identity and behavior. I
 - **Display Name** / **Full Name** — how the client presents to contacts.
 - **Profile Picture** — an image URL (http/https), a data URL, or base64; it is cropped to a square and shrunk automatically to fit SimpleX's avatar limit. Leave empty to remove it.
 - **Peer Type** — Bot or Human (cosmetic; both transfer files and messages either way).
-- **Auto-Accept Contact Requests** — automatically accept incoming requests to the client's address.
+- **Auto-Accept Contact Requests** — automatically accept incoming requests to the client's address. When off, each request waits until your application accepts it.
 - **Business Mode** / **Welcome Message** — present a business address and/or send an auto-reply to new contacts.
 - **Message Relays (SMP/XFTP)** — SimpleX's public servers (default), your own self-hosted SimpleX Server, or custom addresses.
 - **Cleanup Received Files After (days)** — optionally delete old received files.

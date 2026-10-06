@@ -45,6 +45,19 @@ export const mainMounts = sdk.Mounts.of().mountVolume({
   readonly: false,
 })
 
+export function detailsResult(
+  title: string,
+  message: string,
+  details: string,
+): { version: '1' } & T.ActionResultV1 {
+  return {
+    version: '1',
+    title,
+    message,
+    result: { type: 'multiline', value: details, copyable: true },
+  }
+}
+
 /**
  * Build result members for a SimpleX connection link (one-time invitation or
  * long-lived address). Both a short link (modern clients) and a full link

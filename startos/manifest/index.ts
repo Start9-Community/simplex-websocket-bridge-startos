@@ -1,5 +1,5 @@
 import { setupManifest } from '@start9labs/start-sdk'
-import { long, short } from './i18n'
+import { backupAlert, long, short } from './i18n'
 
 export const manifest = setupManifest({
   id: 'simplex-websocket-bridge',
@@ -14,6 +14,10 @@ export const manifest = setupManifest({
   donationUrl:
     'https://github.com/simplex-chat/simplex-chat#help-us-with-donations',
   description: { short, long },
+  preDownloadAlert: {
+    message: backupAlert,
+    when: { sourceVersion: '<7.0.0:0' },
+  },
   volumes: ['main', 'startos'],
   images: {
     // Consume the standalone container image published from
@@ -26,22 +30,6 @@ export const manifest = setupManifest({
         dockerTag: 'lundog/simplex-websocket-bridge:7.0.2',
       },
       arch: ['x86_64', 'aarch64'],
-    },
-  },
-  // Declared optional; setupDependencies (dependencies.ts) flips `simplex` to a
-  // `running` dependency when the user picks self-hosted (Local) relays in the
-  // Configure action. Public and Custom relays need no dependency.
-  dependencies: {
-    simplex: {
-      optional: true,
-      description: {
-        en_US:
-          'Optional: relay your messages and files through your own self-hosted SimpleX Server instead of the public servers. Select "My self-hosted SimpleX Server" in the Configure Client action.',
-      },
-      metadata: {
-        title: 'SimpleX Server',
-        icon: 'https://raw.githubusercontent.com/Start9Labs/simplex-startos/master/icon.svg',
-      },
     },
   },
 })

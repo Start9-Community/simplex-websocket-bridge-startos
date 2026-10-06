@@ -130,7 +130,7 @@ Relays land in that same sync, and the `websocket` health check waits for it —
 
 ## Actions
 
-Seven actions, in two groups.
+Seven actions, in two groups. When an action that talks to the running client fails, the error text is returned in a copyable field.
 
 ### General
 
@@ -148,7 +148,7 @@ Generates a bearer token for one outside client. The token is returned once as a
 
 #### Revoke API Key
 
-Removes a selected client credential. The interface picks up the change reactively, so revocation takes effect without restarting the service.
+Removes the client credential you pick; no key is preselected. The interface picks up the change reactively, so revocation takes effect without restarting the service.
 
 #### Create SimpleX Invitation
 

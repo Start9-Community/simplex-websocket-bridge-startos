@@ -18,3 +18,16 @@ export const long = {
   fr_FR:
     "SimpleX Websocket Bridge exécute un client SimpleX Chat sans interface et expose le réseau SimpleX via une API Websocket authentifiée par jeton, afin que vos applications, scripts, bots et agents IA — ou d'autres services StartOS — puissent envoyer et recevoir des messages et des fichiers SimpleX de façon programmatique. C'est l'accès de vos logiciels à SimpleX, pas une application de messagerie pour humains : il n'y a pas de boîte de réception ici pour lire ou écrire (utilisez les applications mobiles ou de bureau de SimpleX pour cela). SimpleX est la première messagerie sans identifiants d'utilisateur — pas même des numéros aléatoires — entièrement open source, chiffrée de bout en bout et résistante aux métadonnées par conception.",
 }
+
+export const backupAlert = {
+  en_US:
+    'Back up this service before updating. This update moves SimpleX Chat to 7.0.2, and 7.0.0 upgrades the SimpleX database in place: the version you have installed cannot read it, so going back means uninstalling and restoring from that backup.',
+  es_ES:
+    'Haz una copia de seguridad de este servicio antes de actualizar. Esta actualización lleva SimpleX Chat a la 7.0.2, y la 7.0.0 actualiza la base de datos de SimpleX: la versión que tienes instalada no puede leerla, así que volver atrás implica desinstalar y restaurar desde esa copia de seguridad.',
+  de_DE:
+    'Sichere diesen Dienst vor dem Update. Dieses Update bringt SimpleX Chat auf 7.0.2, und 7.0.0 aktualisiert die SimpleX-Datenbank: Deine installierte Version kann sie nicht lesen — ein Rückschritt bedeutet Deinstallieren und Wiederherstellen aus dieser Sicherung.',
+  pl_PL:
+    'Wykonaj kopię zapasową tej usługi przed aktualizacją. Ta aktualizacja przenosi SimpleX Chat do wersji 7.0.2, a 7.0.0 aktualizuje bazę danych SimpleX: zainstalowana wersja nie potrafi jej odczytać, więc powrót oznacza odinstalowanie i przywrócenie z tej kopii zapasowej.',
+  fr_FR:
+    'Sauvegardez ce service avant la mise à jour. Cette mise à jour fait passer SimpleX Chat à la 7.0.2, et la 7.0.0 met à niveau la base de données SimpleX : la version installée ne peut pas la lire, donc revenir en arrière implique de désinstaller et de restaurer depuis cette sauvegarde.',
+}
