@@ -1,4 +1,4 @@
-import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
+import { VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
   version: '7.0.2:2',
@@ -66,6 +66,6 @@ export const current = VersionInfo.of({
   },
   migrations: {
     up: async ({ effects }) => {},
-    down: IMPOSSIBLE,
+    down: async () => {},
   },
 })
