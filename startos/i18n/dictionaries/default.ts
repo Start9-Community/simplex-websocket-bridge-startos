@@ -36,38 +36,31 @@ const dict = {
   'Client Reset': 32,
   'The SimpleX identity, all contacts, and chat history have been deleted; your API keys are kept. Start the service to create a fresh identity. Every previous contact must reconnect with a new invitation or address — if this client is used with OpenClaw, purge the channel state before they do.': 33,
 
-  // 34–42 retired with the combined API Keys action.
-  'API Keys': 34,
-  'Manage the bearer tokens that gate outside access to the Websocket API.': 35,
-  'Bearer tokens that grant outside access to the Websocket API. Add one per client; delete to revoke. On-box services connect directly and never need a key.': 36,
   Label: 37,
   'A name to identify this key (e.g. the client it belongs to).': 38,
   Token: 39,
-  'Leave blank when adding a key and one is generated for you. Keep it secret.': 40,
-  'API Keys Saved': 41,
-  'Outside clients authenticate with the header: Authorization: Bearer <token>': 42,
 
   // configure SimpleX client action
   'SMP relay URIs': 43,
-  'One SMP server address per line, e.g. smp://<fingerprint>@host. These REPLACE the public preset servers.': 44,
+  "One SMP relay address per line, each starting with smp:// and including the server's fingerprint. Messages go through these instead of the public preset relays; leave empty to keep the presets for messages.": 44,
   'XFTP relay URIs': 45,
-  'One XFTP server address per line, e.g. xftp://<fingerprint>@host. These REPLACE the public preset servers.': 46,
+  "One XFTP relay address per line, each starting with xftp:// and including the server's fingerprint. Files go through these instead of the public preset relays; leave empty to keep the presets for files.": 46,
   'The name peers see when they connect to your client.': 47,
   'Full Name': 48,
   'Optional longer name shown alongside the display name.': 49,
   'Set a profile picture from an image URL (http/https), a data URL, or base64. Any size — it is cropped to a square and shrunk to fit the SimpleX avatar size limit. Leave empty to remove the picture.': 50,
   'Peer Type': 51,
-  'Bot marks the profile as a SimpleX bot so peer apps show command menus. Human presents as a regular user. Cosmetic — file and message transfer work either way.': 52,
+  "- Bot: marks the profile as a SimpleX bot, so your contacts' apps show its command menus\n- Human: presents the profile as a regular user\nMessages and files work the same either way.": 52,
   Bot: 53,
   Human: 54,
   'Auto-Accept Contact Requests': 55,
-  'Automatically accept incoming contact requests to the client address.': 56,
+  'When off, a request to connect through the client address waits until your application accepts it over the Websocket API.': 56,
   'Business Mode': 57,
   'Present the address as a business address (each contact becomes a group with the business, enabling multiple agents).': 58,
   'Welcome Message': 59,
   'Optional auto-reply sent to each new contact when they connect.': 60,
   'Message Relays (SMP/XFTP)': 61,
-  'Which servers relay your messages and files. Applied immediately (no restart) and only to NEW connections — existing contacts and your current address keep using the server they were created on. Use Reset SimpleX Address to move your address onto the new relays.': 62,
+  '- SimpleX defaults (public): the preset public relays that SimpleX Chat ships with\n- My self-hosted SimpleX Server: the relays of your SimpleX Server on this server, which must be installed and running\n- Custom: relay addresses you enter\nA change applies without a restart and only to new connections; existing contacts and your current address keep the relays they were created on. Run Reset SimpleX Address to move your address onto the new relays.': 62,
   'SimpleX defaults (public)': 63,
   'My self-hosted SimpleX Server': 64,
   Custom: 65,
@@ -78,7 +71,7 @@ const dict = {
   'Configure Client': 70,
   'Set the client display name, profile, contact-request handling, message relays, and file retention. Run this before starting the service for the first time.': 71,
   'Saved, But Live Update Failed': 74,
-  'Settings were saved, but applying them to the running client failed: ': 75,
+  'Settings were saved, but applying them to the running client failed. The details are below.': 75,
 
   // main.ts sync
   'SimpleX client settings synced': 78,
@@ -102,7 +95,7 @@ const dict = {
 
   // configure client — profile management mode
   'SimpleX Profile': 93,
-  'Choose whether StartOS manages the client profile — display name, picture, and the other chat settings below — or leaves it to your own application. Message relays and file cleanup are managed by StartOS in either mode.': 94,
+  '- Managed by StartOS: StartOS sets the display name, picture and the other chat settings below on the client\n- Managed by my application: StartOS leaves the profile to your own application and does not change it\nStartOS manages message relays and file cleanup in either mode.': 94,
   'Managed by StartOS': 95,
   'Managed by my application': 96,
 
@@ -121,12 +114,13 @@ const dict = {
   'Stop an outside client from using the Websocket API.': 106,
   'No API keys to revoke': 107,
   'API Key': 108,
-  'Select the key to revoke.': 109,
   'Nothing to Revoke': 110,
   'This service has no API keys.': 111,
   'The selected API key no longer exists.': 112,
   'API Key Revoked': 113,
   'The selected key no longer grants access.': 114,
+  'The SimpleX client could not complete this request. The details are below.': 115,
+  'The SimpleX client answered without a link. Its response is below.': 116,
 } as const
 
 /**

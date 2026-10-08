@@ -1,7 +1,7 @@
 import { CC } from '@simplex-chat/types'
 import { sdk } from '../sdk'
 import { withBotSession } from '../bot-client'
-import { connLinkMembers } from '../utils'
+import { connLinkMembers, detailsResult } from '../utils'
 import { i18n } from '../i18n'
 
 /**
@@ -63,12 +63,13 @@ export const resetAddress = sdk.Action.withoutInput(
         return createEnv.resp.connLinkContact
       })
     } catch (err) {
-      return {
-        version: '1',
-        title: i18n('Reset Failed'),
-        message: (err as Error).message,
-        result: null,
-      }
+      return detailsResult(
+        i18n('Reset Failed'),
+        i18n(
+          'The SimpleX client could not complete this request. The details are below.',
+        ),
+        (err as Error).message,
+      )
     }
 
     return {

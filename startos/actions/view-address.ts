@@ -1,7 +1,7 @@
 import { CC } from '@simplex-chat/types'
 import { sdk } from '../sdk'
 import { withBotSession } from '../bot-client'
-import { connLinkMembers } from '../utils'
+import { connLinkMembers, detailsResult } from '../utils'
 import { i18n } from '../i18n'
 
 /**
@@ -58,22 +58,24 @@ export const viewAddress = sdk.Action.withoutInput(
         return createEnv.resp.connLinkContact
       })
     } catch (err) {
-      return {
-        version: '1',
-        title: i18n('Could Not Reach Bot'),
-        message: (err as Error).message,
-        result: null,
-      }
+      return detailsResult(
+        i18n('Could Not Reach Bot'),
+        i18n(
+          'The SimpleX client could not complete this request. The details are below.',
+        ),
+        (err as Error).message,
+      )
     }
 
     const members = connLinkMembers(link)
     if (members.length === 0) {
-      return {
-        version: '1',
-        title: i18n('No Address Returned'),
-        message: JSON.stringify(link).slice(0, 2048),
-        result: null,
-      }
+      return detailsResult(
+        i18n('No Address Returned'),
+        i18n(
+          'The SimpleX client answered without a link. Its response is below.',
+        ),
+        JSON.stringify(link, null, 2).slice(0, 2048),
+      )
     }
 
     return {

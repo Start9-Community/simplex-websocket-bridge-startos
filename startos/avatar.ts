@@ -1,4 +1,4 @@
-import Jimp from 'jimp'
+import { Jimp, JimpMime } from 'jimp'
 import { readFile } from 'fs/promises'
 
 /**
@@ -30,9 +30,8 @@ async function bufferToAvatarDataUrl(source: Buffer): Promise<string> {
     // Re-decode from the original each step: cover() mutates the instance, so
     // we always crop/scale from full resolution rather than a prior downscale.
     const image = await Jimp.read(source)
-    image.cover(size, size) // center-crop + scale to fill the square
-    image.quality(quality)
-    const jpeg = await image.getBufferAsync(Jimp.MIME_JPEG)
+    image.cover({ w: size, h: size }) // center-crop + scale to fill the square
+    const jpeg = await image.getBuffer(JimpMime.jpeg, { quality })
     if (jpeg.length <= MAX_AVATAR_BYTES) {
       return `data:image/jpg;base64,${jpeg.toString('base64')}`
     }

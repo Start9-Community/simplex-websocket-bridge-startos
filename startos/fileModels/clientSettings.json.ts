@@ -19,7 +19,7 @@ import { sdk } from '../sdk'
 
 export type ServerMode = 'public' | 'local' | 'custom'
 
-export interface ClientSettings {
+export type ClientSettings = {
   /**
    * When true (default), StartOS manages the profile/address over the WebSocket
    * and applies relays authoritatively over the API. When false the operator's
@@ -65,14 +65,14 @@ export const SETTINGS_DEFAULTS: ClientSettings = {
 }
 
 const serversShape = z
-  .object({
+  .looseObject({
     mode: z.enum(['public', 'local', 'custom']).catch('public'),
     smp: z.array(z.string()).catch([]),
     xftp: z.array(z.string()).catch([]),
   })
   .catch(SETTINGS_DEFAULTS.servers)
 
-const shape = z.object({
+const shape = z.looseObject({
   manageProfile: z.boolean().catch(true),
   displayName: z.string().min(1).catch(SETTINGS_DEFAULTS.displayName),
   fullName: z.string().catch(''),

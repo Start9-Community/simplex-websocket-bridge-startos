@@ -8,6 +8,7 @@ import {
 import { syncClientSettings, configureServers } from '../liveSync'
 import { resolveServerUris } from '../serverConfig'
 import { pastedImageToAvatarDataUrl } from '../avatar'
+import { detailsResult } from '../utils'
 
 const { InputSpec, Value, Variants } = sdk
 
@@ -31,7 +32,7 @@ const customServersSpec = InputSpec.of({
   smp: Value.textarea({
     name: i18n('SMP relay URIs'),
     description: i18n(
-      'One SMP server address per line, e.g. smp://<fingerprint>@host. These REPLACE the public preset servers.',
+      "One SMP relay address per line, each starting with smp:// and including the server's fingerprint. Messages go through these instead of the public preset relays; leave empty to keep the presets for messages.",
     ),
     required: false,
     default: null,
@@ -43,7 +44,7 @@ const customServersSpec = InputSpec.of({
   xftp: Value.textarea({
     name: i18n('XFTP relay URIs'),
     description: i18n(
-      'One XFTP server address per line, e.g. xftp://<fingerprint>@host. These REPLACE the public preset servers.',
+      "One XFTP relay address per line, each starting with xftp:// and including the server's fingerprint. Files go through these instead of the public preset relays; leave empty to keep the presets for files.",
     ),
     required: false,
     default: null,
@@ -97,7 +98,7 @@ const managedProfileSpec = InputSpec.of({
   peerType: Value.select({
     name: i18n('Peer Type'),
     description: i18n(
-      'Bot marks the profile as a SimpleX bot so peer apps show command menus. Human presents as a regular user. Cosmetic — file and message transfer work either way.',
+      "- Bot: marks the profile as a SimpleX bot, so your contacts' apps show its command menus\n- Human: presents the profile as a regular user\nMessages and files work the same either way.",
     ),
     default: 'bot',
     values: { bot: i18n('Bot'), human: i18n('Human') },
@@ -105,7 +106,7 @@ const managedProfileSpec = InputSpec.of({
   autoAcceptContacts: Value.toggle({
     name: i18n('Auto-Accept Contact Requests'),
     description: i18n(
-      'Automatically accept incoming contact requests to the client address.',
+      'When off, a request to connect through the client address waits until your application accepts it over the Websocket API.',
     ),
     default: true,
   }),
@@ -134,7 +135,7 @@ const inputSpec = InputSpec.of({
   profile: Value.union({
     name: i18n('SimpleX Profile'),
     description: i18n(
-      'Choose whether StartOS manages the client profile — display name, picture, and the other chat settings below — or leaves it to your own application. Message relays and file cleanup are managed by StartOS in either mode.',
+      '- Managed by StartOS: StartOS sets the display name, picture and the other chat settings below on the client\n- Managed by my application: StartOS leaves the profile to your own application and does not change it\nStartOS manages message relays and file cleanup in either mode.',
     ),
     default: 'managed',
     variants: Variants.of({
@@ -148,7 +149,7 @@ const inputSpec = InputSpec.of({
   servers: Value.union({
     name: i18n('Message Relays (SMP/XFTP)'),
     description: i18n(
-      'Which servers relay your messages and files. Applied immediately (no restart) and only to NEW connections — existing contacts and your current address keep using the server they were created on. Use Reset SimpleX Address to move your address onto the new relays.',
+      '- SimpleX defaults (public): the preset public relays that SimpleX Chat ships with\n- My self-hosted SimpleX Server: the relays of your SimpleX Server on this server, which must be installed and running\n- Custom: relay addresses you enter\nA change applies without a restart and only to new connections; existing contacts and your current address keep the relays they were created on. Run Reset SimpleX Address to move your address onto the new relays.',
     ),
     default: 'public',
     variants: Variants.of({
@@ -343,14 +344,13 @@ export const configureClient = sdk.Action.withInput(
       }
       if (manageProfile) await syncClientSettings(effects, settings)
     } catch (err) {
-      return {
-        version: '1',
-        title: i18n('Saved, But Live Update Failed'),
-        message: i18n(
-          'Settings were saved, but applying them to the running client failed: ',
-        ).concat((err as Error).message),
-        result: null,
-      }
+      return detailsResult(
+        i18n('Saved, But Live Update Failed'),
+        i18n(
+          'Settings were saved, but applying them to the running client failed. The details are below.',
+        ),
+        (err as Error).message,
+      )
     }
 
     return null
