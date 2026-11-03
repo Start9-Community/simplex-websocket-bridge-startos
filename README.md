@@ -53,10 +53,11 @@ One image, consumed as published.
 
 The file-exchange layout under `main` is a published contract. Package-owned API credentials live separately so the upstream container cannot read them.
 
-| Volume    | Mount Point | Purpose                               |
-| --------- | ----------- | ------------------------------------- |
-| `main`    | `/data`     | The SimpleX profile and file exchange |
-| `startos` | Not mounted | Package-owned API credential storage  |
+| Volume    | Mount Point | Purpose                                               |
+| --------- | ----------- | ----------------------------------------------------- |
+| `main`    | `/data`     | The SimpleX profile and file exchange                 |
+| `startos` | Not mounted | Package-owned API credential storage                  |
+| `public`  | Not mounted | The dependents' key, which dependents mount read-only |
 
 | Path                   | Written by     | Holds                               |
 | ---------------------- | -------------- | ----------------------------------- |
@@ -72,14 +73,15 @@ The file-exchange layout under `main` is a published contract. Package-owned API
 
 ## File Models
 
-Two models, with a clean split of ownership.
+Three models, with a clean split of ownership.
 
 | File                   | Volume    | Format | Written by            |
 | ---------------------- | --------- | ------ | --------------------- |
 | `store.json`           | `startos` | JSON   | Create/Revoke API Key |
 | `client-settings.json` | `main`    | JSON   | Configure Client      |
+| `credentials.json`     | `public`  | JSON   | Init, when missing    |
 
-The mountless store holds **the bearer tokens** that gate the WebSocket, each with a label. The settings file holds everything about the client: the display name and profile, whether contact requests are auto-accepted, business mode, a welcome message, the relay selection, and how long received files are kept.
+The mountless store holds **the bearer tokens** that gate the WebSocket, each with a label. `credentials.json` holds one more, `apiKey`, for services on this server that depend on the bridge. The settings file holds everything about the client: the display name and profile, whether contact requests are auto-accepted, business mode, a welcome message, the relay selection, and how long received files are kept.
 
 Every field carries a default, so a partial or older file parses into a complete object rather than failing — and the settings file may legitimately not exist yet, since the configuration action is meant to be run **before** the first start.
 
@@ -112,15 +114,15 @@ One interface, and it is authenticated.
 | --------- | ---- | ---- | ---- | -------------------------------------------- |
 | Websocket | `ws` | api  | 5225 | The API for driving SimpleX programmatically |
 
-**Bearer authentication is applied at the StartOS reverse proxy**, not by the application: an outside client must send a token from the store or receive a 401 before it ever reaches the container. The token set is read reactively, so creating or revoking a key takes effect without a restart.
+**Bearer authentication is applied at the StartOS reverse proxy**, not by the application: every client must send an accepted token or receive a 401 before it ever reaches the container. The token set is read reactively, so creating or revoking a key takes effect without a restart.
 
-**Same-box packages bypass that gate**, because they dial the container's bridge address directly and that path does not traverse the proxy. So a dependent service needs no token, and a token is only for something outside the server.
+**Same-box packages are gated too**, on the bridge address as on the LAN. A dependent mounts the `public` volume read-only and sends the `apiKey` from `credentials.json`; the proxy accepts it alongside the keys from Create API Key. Init generates it whenever it is missing.
 
 **Anyone with a token can act as your SimpleX identity** — read messages, send messages, and send files. Treat a token as the identity itself.
 
 ## Installation and First-Run Flow
 
-A fresh install accepts no outside API clients. Run **Create API Key** when an outside client needs access; same-box dependents require no token.
+A fresh install accepts no outside API clients. Run **Create API Key** when an outside client needs access; same-box dependents read their own key.
 
 **The configuration action is meant to be run before the first start.** Doing so means the profile is created with the name, picture and relays you want, rather than created with defaults and then edited.
 
@@ -199,7 +201,7 @@ Beyond the relay selection, neither says anything about SimpleX itself: a failed
 
 ## Backups and Restore
 
-Both volumes are copied wholesale. Together they contain the profile database, received files, anything staged in the outbound directory, client settings, and API keys.
+All three volumes are copied wholesale. Together they contain the profile database, received files, anything staged in the outbound directory, client settings, the API keys, and the dependents' key, so dependents keep working after a restore.
 
 **The backup is the identity.** Restoring it reproduces the same SimpleX client with the same contacts and the same address — which is what makes it worth having, and what makes it as sensitive as the messages themselves.
 
@@ -209,7 +211,7 @@ Both volumes are copied wholesale. Together they contain the profile database, r
 
 1. **This is a bot bridge, not a chat client.** There is no interface for a human to read messages in.
 2. **A bearer token is the identity.** Anyone holding one can send and read as your client.
-3. **Same-box packages need no token**, because they bypass the proxy over the bridge.
+3. **Same-box packages need a token too**; dependents read theirs from the `public` volume.
 4. **Managed and hands-off modes are mutually exclusive**; running your own application against a managed profile means two writers. The choice covers the profile only — relays are StartOS's either way.
 5. **An unreachable local relay is never replaced by a public one**; the bridge reports unhealthy until the server resolves.
 6. **Reset Client is irreversible** and can strand a consumer's contact state — see the action.
@@ -231,14 +233,16 @@ subcontainers:
 volumes:
   main: /data # .simplex/{,files,tmp,outbound} — siblings on one fs
   startos: null # mountless API credential storage
+  public: null # credentials.json with the dependents' key, mounted read-only by dependents
 file_models:
   - store.json # apiKeys: [{ label, token }], on startos
   - client-settings.json # profile, relays, retention, and who owns the client
+  - credentials.json # apiKey for dependents, on public
 startos_managed_env_vars: [] # computed per-start from clientSettings; see serverConfig.ts
 dependencies:
   - simplex # optional, kind: running, only while relay mode is `local`
 interfaces:
-  ws: { type: api, port: 5225 } # bearer auth at the OS proxy; bridge callers bypass it
+  ws: { type: api, port: 5225 } # bearer auth at the OS proxy, bridge address included
 actions:
   - configure-client # run before first start
   - create-api-key

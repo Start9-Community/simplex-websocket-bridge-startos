@@ -2,7 +2,7 @@
   "name": "simplex-websocket-bridge-startos",
   "dependencies": {
     "@simplex-chat/types": "^0.7.0",
-    "@start9labs/start-sdk": "3.0.3",
+    "@start9labs/start-sdk": "3.1.1",
     "jimp": "^1.6.1",
     "ws": "^8.18.0"
   },

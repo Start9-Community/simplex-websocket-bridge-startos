@@ -34,7 +34,7 @@ verified, tried, and decided belongs in the commit message and the PR body.
 
 ## This repo
 
-- **Don't rename the `ws` interface, the `websocket` health check, the `main` host, the `main` volume or its `.simplex/files` and `.simplex/outbound` paths** — dependents such as openclaw require them by id and mount those paths. Keep `websocket` gated on the `sync-settings` one-shot, or a dependent connects before the relay selection lands.
+- **Don't rename the `ws` interface, the `websocket` health check, the `main` host, the `public` volume's `credentials.json` → `apiKey`, the `main` volume or its `.simplex/files` and `.simplex/outbound` paths** — dependents such as openclaw require them by id and mount those paths. Keep `websocket` gated on the `sync-settings` one-shot, or a dependent connects before the relay selection lands.
 - **Don't split `/data` across mounts** — simplex-chat moves finished downloads from `tmp` to `files` with a rename that fails across filesystems.
 - **Don't add profile writes to hands-off mode (`manageProfile: false`)** — keeping a second writer off the profile is the whole point of the mode.
 - **Never pass relays as container env** — an env `--server` aborts startup once the relay is stored under an older fingerprint; apply the selection over the operator-servers API.

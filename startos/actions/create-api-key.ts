@@ -64,6 +64,7 @@ export const createApiKey = sdk.Action.withInput(
         copyable: true,
         qr: false,
         masked: true,
+        launchable: false,
       },
     }
   },

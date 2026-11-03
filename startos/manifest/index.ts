@@ -18,7 +18,7 @@ export const manifest = setupManifest({
     message: backupAlert,
     when: { sourceVersion: '<7.0.0:0' },
   },
-  volumes: ['main', 'startos'],
+  volumes: ['main', 'startos', 'public'],
   images: {
     // Consume the standalone container image published from
     // github.com/lundog/simplex-websocket-bridge-docker, rather than building
