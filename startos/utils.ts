@@ -54,7 +54,14 @@ export function detailsResult(
     version: '1',
     title,
     message,
-    result: { type: 'multiline', value: details, copyable: true },
+    result: {
+      type: 'multiline',
+      value: details,
+      copyable: true,
+      qr: false,
+      masked: false,
+      filename: null,
+    },
   }
 }
 
@@ -80,6 +87,7 @@ export function connLinkMembers(
       copyable: true,
       qr: true,
       masked: false,
+      launchable: false,
     })
   }
   if (full) {
@@ -93,6 +101,7 @@ export function connLinkMembers(
       copyable: true,
       qr: true,
       masked: false,
+      launchable: false,
     })
   }
   return members

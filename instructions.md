@@ -23,11 +23,11 @@ This service has no human chat interface — it is driven entirely by your own s
 5. Connect any Websocket client to that URL with the bearer token, then drive it with the SimpleX protocol (see Documentation).
 6. To give someone a way to reach the bridge, run the **Create SimpleX Invitation** action and share the link or QR — they paste it into their SimpleX client.
 
-On-box StartOS services that depend on this package connect directly and do not need an API key.
+On-box StartOS services also need a bearer token. Compatible dependents read their key automatically from this service's shared credentials; you do not need to run **Create API Key** for them. Update a dependent that still connects without a token.
 
 ## Authentication
 
-Outside access to the Websocket API is gated by a bearer token at the StartOS reverse proxy: connect with `Authorization: Bearer <token>` on the Websocket upgrade — requests without a valid token get `401` and never reach the bridge.
+Access to the Websocket API, including connections from other services on this server, is gated by a bearer token at the StartOS reverse proxy: connect with `Authorization: Bearer <token>` on the Websocket upgrade — requests without a valid token get `401` and never reach the bridge.
 
 Run **Create API Key** once per outside client and copy the returned token immediately. Run **Revoke API Key** and pick that client's key to remove its access; revocation takes effect without restarting the service.
 
