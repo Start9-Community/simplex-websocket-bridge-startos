@@ -62,15 +62,6 @@ The pin lives in `startos/manifest/index.ts` at `images.simplex.source.dockerTag
    `startos/serverConfig.ts` (`computeStartEnv`, to `/data/.simplex/files` and `/data/.simplex/tmp`,
    under the single `/data` mount — see `startos/utils.ts` and the README's file-exchange contract).
 
-   We set them precisely because the image's defaults have moved before and will not announce it:
-   through 6.5.4 the image defaulted to `/simplex`, and 6.5.5 silently changed it to
-   `$HOME/.simplex/{files,tmp}`. A bump that relied on the defaults could send every received file
-   somewhere no dependent service can see, breaking the file-exchange contract with no error.
-
    So on each bump, confirm the image still honors both variables, and that inbound and temp stay
    co-located: simplex-chat completes a download with an atomic `rename(2)` from temp into inbound,
    which fails with `EXDEV` if they are separate mounts.
-
-4. Bump the package `version` and update `releaseNotes` in `startos/versions/current.ts`. Add a
-   migration only if the new version needs one (see the
-   [packaging guide on versions](https://docs.start9.com/packaging)).
